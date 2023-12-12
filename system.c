@@ -28,7 +28,7 @@ void system__init() {
 # if defined(WINDOWS)
     static LARGE_INTEGER res;
     QueryPerformanceFrequency(&res);
-    g_tick_resolution = (uint64_t) res.QuadPart;
+    g_tick_resolution = (uint64_t) res.QuadPart * 100;
 # elif defined(LINUX) || defined(MAC)
     struct timespec res;
     clock_getres(CLOCK_REALTIME, &res);
