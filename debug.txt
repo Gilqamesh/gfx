@@ -1,84 +1,18 @@
-[20:00:03] [glfw] - info: 
+[22:11:03] [glfw] - info: 
   version string: 3.4.0 Wayland X11 GLX Null EGL OSMesa monotonic
   compiled version: 3.4.0
   runtime version: 3.4.0
   number of connected monitors: 1
     0: eDP-1 - physical size: 380x210 [mm]
-[20:00:03] [glfw] - info: controller [window controller] is connected
-[20:00:03] [app] - info: target fps: 500.000000
-[20:00:03] [glfw] - info: window content area's position changed to: 100 169
-[20:00:03] [glfw] - info: window content area's position changed to: 100 169
-[20:00:03] [glfw] - info: window has gained input focus
-[20:00:03] [glfw] - info: window has lost input focus
-[20:00:03] [glfw] - info: window content area's position changed to: 100 169
-[20:00:03] [glfw] - info: window content area's position changed to: 100 169
-[20:00:03] [glfw] - info: window has gained input focus
-[20:00:03] [glfw] - info: framebuffer dimensions changed to: 500px 500px
-[20:00:03] [glfw] - info: window content area's size changed to: 500 500
-[20:00:05] [glfw] - info: window has lost input focus
-[20:00:13] [glfw] - info: window has gained input focus
-[20:00:14] [glfw] - info: button transition [D]: released -> pressed
-[20:00:14] [glfw] - info: button transition [F]: released -> pressed
-[20:00:14] [glfw] - info: button transition [G]: released -> pressed
-[20:00:14] [glfw] - info: button transition [S]: released -> pressed
-[20:00:14] [glfw] - info: button transition [S]: pressed -> released
-[20:00:14] [glfw] - info: button transition [G]: pressed -> released
-[20:00:14] [glfw] - info: button transition [D]: pressed -> released
-[20:00:14] [glfw] - info: button transition [F]: pressed -> released
-[20:00:14] [glfw] - info: cursor has entered the content area
-[20:00:15] [glfw] - info: button transition [CURSOR_LEFT]: released -> pressed
-[20:00:15] [glfw] - info: button transition [CURSOR_RIGHT]: released -> pressed
-[20:00:15] [glfw] - info: button transition [CURSOR_LEFT]: pressed -> released
-[20:00:15] [glfw] - info: button transition [CURSOR_RIGHT]: pressed -> released
-[20:00:15] [glfw] - info: button transition [D]: released -> pressed
-[20:00:15] [glfw] - info: button transition [G]: released -> pressed
-[20:00:15] [glfw] - info: button transition [S]: released -> pressed
-[20:00:15] [glfw] - info: button transition [F]: released -> pressed
-[20:00:15] [glfw] - info: button transition [F]: pressed -> released
-[20:00:15] [glfw] - info: button transition [G]: pressed -> released
-[20:00:15] [glfw] - info: button transition [D]: pressed -> released
-[20:00:15] [glfw] - info: button transition [S]: pressed -> released
-[20:00:15] [glfw] - info: button transition [CURSOR_LEFT]: released -> pressed
-[20:00:15] [glfw] - info: button transition [CURSOR_RIGHT]: released -> pressed
-[20:00:15] [glfw] - info: button transition [3]: released -> pressed
-[20:00:15] [glfw] - info: button transition [4]: released -> pressed
-[20:00:15] [glfw] - info: button transition [CURSOR_LEFT]: pressed -> released
-[20:00:15] [glfw] - info: button transition [CURSOR_RIGHT]: pressed -> released
-[20:00:15] [glfw] - info: button transition [5]: released -> pressed
-[20:00:15] [glfw] - info: button transition [6]: released -> pressed
-[20:00:15] [glfw] - info: button transition [5]: pressed -> released
-[20:00:15] [glfw] - info: button transition [6]: pressed -> released
-[20:00:15] [glfw] - info: button transition [4]: pressed -> released
-[20:00:15] [glfw] - info: button transition [3]: pressed -> released
-[20:00:16] [glfw] - info: button transition [D]: released -> pressed
-[20:00:16] [glfw] - info: button transition [F]: released -> pressed
-[20:00:16] [glfw] - info: button transition [G]: released -> pressed
-[20:00:16] [glfw] - info: button transition [S]: released -> pressed
-[20:00:16] [glfw] - info: button transition [CURSOR_LEFT]: released -> pressed
-[20:00:16] [glfw] - info: button transition [F]: pressed -> released
-[20:00:16] [glfw] - info: button transition [S]: pressed -> released
-[20:00:16] [glfw] - info: button transition [D]: pressed -> released
-[20:00:16] [glfw] - info: button transition [G]: pressed -> released
-[20:00:16] [glfw] - info: button transition [CURSOR_LEFT]: pressed -> released
-[20:00:16] [glfw] - info: button transition [D]: released -> pressed
-[20:00:16] [glfw] - info: button transition [F]: released -> pressed
-[20:00:16] [glfw] - info: button transition [G]: released -> pressed
-[20:00:16] [glfw] - info: button transition [S]: released -> pressed
-[20:00:16] [glfw] - info: button transition [G]: pressed -> released
-[20:00:16] [glfw] - info: button transition [S]: pressed -> released
-[20:00:16] [glfw] - info: button transition [D]: pressed -> released
-[20:00:16] [glfw] - info: button transition [F]: pressed -> released
-[20:00:16] [glfw] - info: button transition [S]: released -> pressed
-[20:00:16] [glfw] - info: button transition [D]: released -> pressed
-[20:00:16] [glfw] - info: button transition [F]: released -> pressed
-[20:00:16] [glfw] - info: button transition [G]: released -> pressed
-[20:00:16] [glfw] - info: button transition [F]: pressed -> released
-[20:00:16] [glfw] - info: button transition [G]: pressed -> released
-[20:00:16] [glfw] - info: button transition [CURSOR_LEFT]: released -> pressed
-[20:00:16] [glfw] - info: button transition [S]: pressed -> released
-[20:00:16] [glfw] - info: button transition [D]: pressed -> released
-[20:00:16] [glfw] - info: button transition [CURSOR_LEFT]: pressed -> released
-[20:00:17] [glfw] - info: cursor has left the content area
-[20:00:17] [glfw] - info: cursor has entered the content area
-[20:00:18] [glfw] - info: cursor has left the content area
-[20:00:25] [glfw] - info: button transition [WINDOW_CLOSE]: released -> pressed
+[22:11:03] [glfw] - info: controller [window controller] is connected
+[22:11:03] [app] - info: target fps: 500.000000
+[22:11:03] [glfw] - info: window content area's position changed to: 100 169
+[22:11:03] [glfw] - info: window content area's position changed to: 100 169
+[22:11:03] [glfw] - info: window has gained input focus
+[22:11:03] [glfw] - info: window has lost input focus
+[22:11:03] [glfw] - info: window content area's position changed to: 100 169
+[22:11:03] [glfw] - info: window content area's position changed to: 100 169
+[22:11:03] [glfw] - info: window has gained input focus
+[22:11:03] [glfw] - info: framebuffer dimensions changed to: 500px 500px
+[22:11:03] [glfw] - info: window content area's size changed to: 500 500
+[22:11:06] [glfw] - info: button transition [WINDOW_CLOSE]: released -> pressed

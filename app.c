@@ -2,6 +2,7 @@
 
 #include "debug.h"
 #include "helper_macros.h"
+#include "system.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "third_party/stb/stb_image.h"
@@ -67,6 +68,8 @@ static void app__update(app_t* self) {
 }
 
 bool app__create(app_t* self, int argc, char* argv[]) {
+    system__init();
+
     (void) argc;
     (void) argv;
 
@@ -167,6 +170,7 @@ void app__run(app_t* self) {
         window__swap_buffers(self->window);
 
         double time_end = glfw__get_time_s();
+        // system__sleep();
         while (target_fps * (time_end - time_start) < 1.0) {
             // usleep(0);
             time_end = glfw__get_time_s();

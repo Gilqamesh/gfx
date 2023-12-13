@@ -4,13 +4,18 @@
 int main() {
     system__init();
 
-    uint64_t start = system__get_tick();
+    uint32_t us_to_sleep = 1;
+    for (uint32_t i = 0; i < 100; ++i, us_to_sleep += 10) {
+        double start = system__get_time();
 
-    system__usleep(13);
+        system__usleep(us_to_sleep);
 
-    uint64_t end = system__get_tick();
+        double end = system__get_time();
 
-    printf("Time passed: %lfus\n", (end - start) / 1000.0);
+        const uint64_t expected = us_to_sleep;
+        const double actual     = (end - start) * 1000000.0;
+        printf("Expected: %uus, actual: %lfus, diff: %lf\n", expected, actual, expected - actual);
+    }
 
     return 0;
 }

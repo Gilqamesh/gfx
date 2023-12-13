@@ -1,0 +1,53 @@
+{
+    "configurations": [
+        {
+            "name": "Module Compiler",
+            "type": "cppdbg",
+            "request": "launch",
+            // "program": "${workspaceFolder}/lib/test_framework.exe",
+            // "program": "${workspaceFolder}/modules/test_framework/test/test_framework.exe",
+            // "program": "${workspaceFolder}/modules/io/file/test/file.exe",
+            // "program": "${workspaceFolder}/modules/io/file/file_reader/test/file_reader.exe",
+            // "program": "${workspaceFolder}/vm_stuff/a.out",
+            "program": "${workspaceFolder}/a.out",
+            // "program": "${workspaceFolder}/modules/data_structures/circular_buffer/test/circular_buffer.exe",
+            // "program": "${workspaceFolder}/modules/test/modules.exe",
+            // "program": "${workspaceFolder}/transpiler/transpiler.exe",
+            // "program": "${workspaceFolder}/test.exe",
+            // "program": "${workspaceFolder}/modules/io/console/test/console.exe",
+            // "program": "${workspaceFolder}/modules/compiler/giescript/test/giescript.exe",
+            // "program": "${workspaceFolder}/modules/compiler/interpreter/test/interpreter.exe",
+            // "program": "${workspaceFolder}/modules/libc/test/libc.exe",
+            // "program": "${workspaceFolder}/modules/compiler/parser/lox_parser/test/lox_parser.exe",
+            // "program": "${workspaceFolder}/modules/types/string/string_replacer/test/string_replacer.exe",
+            // "program": "${workspaceFolder}/modules/math/lerp/test/lerp.exe",
+            // "program": "${workspaceFolder}/modules/system/thread/test/thread.exe",
+            // "program": "${workspaceFolder}/modules/data_structures/bucket_array/test/bucket_array.exe",
+            // "program": "${workspaceFolder}/modules/time/test/time.exe",
+            // "program": "${workspaceFolder}/modules/memory/linear_allocator/test/linear_allocator.exe",
+            // "program": "${workspaceFolder}/modules/data_structures/generic_array/test/generic_array.exe",
+            // "program": "${workspaceFolder}/modules/gil_math/projecteuler/test/projecteuler.exe",
+            // "program": "${workspaceFolder}/modules/data_structures/hash_set/test/hash_set.exe",
+            // "program": "${workspaceFolder}/modules/data_structures/heap/test/heap.exe",
+            "args": [
+                // "-h"
+                // "-fmax-errors="
+                // "${workspaceFolder}/vm_stuff/debug.h"
+                // "${workspaceFolder}/vm_stuff/debug/25-15-04-50/compiled_code"
+                // "${workspaceFolder}/modules/io/file/file_reader/test/file_reader.exe",
+                // "${workspaceFolder}/modules/compiler/interpreter/lox_interpreter/test/fun.lox",
+                // "${workspaceFolder}/modules/memory/linear_allocator/test/linear_allocator.exe"
+                // "${workspaceFolder}/transpiler/transpiler.c",
+                // "${workspaceFolder}/transpiler/out"
+                // "${workspaceFolder}/craftinginterpreters/test/assignment/associativity.lox"
+            ],
+            "environment": [
+                { "name": "LD_LIBRARY_PATH", "value": "${workspaceFolder}/lib" }
+            ],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "externalConsole": true
+        }
+    ]
+}
