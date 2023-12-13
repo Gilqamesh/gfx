@@ -1,18 +1,70 @@
-[22:11:03] [glfw] - info: 
+[18:47:22] [glfw] - info: 
   version string: 3.4.0 Wayland X11 GLX Null EGL OSMesa monotonic
   compiled version: 3.4.0
   runtime version: 3.4.0
   number of connected monitors: 1
     0: eDP-1 - physical size: 380x210 [mm]
-[22:11:03] [glfw] - info: controller [window controller] is connected
-[22:11:03] [app] - info: target fps: 500.000000
-[22:11:03] [glfw] - info: window content area's position changed to: 100 169
-[22:11:03] [glfw] - info: window content area's position changed to: 100 169
-[22:11:03] [glfw] - info: window has gained input focus
-[22:11:03] [glfw] - info: window has lost input focus
-[22:11:03] [glfw] - info: window content area's position changed to: 100 169
-[22:11:03] [glfw] - info: window content area's position changed to: 100 169
-[22:11:03] [glfw] - info: window has gained input focus
-[22:11:03] [glfw] - info: framebuffer dimensions changed to: 500px 500px
-[22:11:03] [glfw] - info: window content area's size changed to: 500 500
-[22:11:06] [glfw] - info: button transition [WINDOW_CLOSE]: released -> pressed
+[18:47:22] [glfw] - info: controller [window controller] is connected
+[18:47:22] [app] - info: target fps: 60.000000
+[18:47:22] [glfw] - info: window content area's position changed to: 100 169
+[18:47:22] [glfw] - info: window content area's position changed to: 100 169
+[18:47:22] [glfw] - info: window has gained input focus
+[18:47:22] [glfw] - info: window has lost input focus
+[18:47:22] [glfw] - info: window content area's position changed to: 100 169
+[18:47:22] [glfw] - info: window content area's position changed to: 100 169
+[18:47:22] [glfw] - info: window has gained input focus
+[18:47:22] [glfw] - info: framebuffer dimensions changed to: 500px 500px
+[18:47:22] [glfw] - info: window content area's size changed to: 500 500
+[18:47:22] [app] - info: adjusted expected updates: 100.000000 -> 66.666667 [updates / s]
+[18:47:22] [glfw] - info: cursor has entered the content area
+[18:47:22] [glfw] - info: cursor scroll: 0.000 -1.000
+[18:47:23] [glfw] - info: button transition [CURSOR_LEFT]: released -> pressed
+[18:47:24] [glfw] - info: button transition [CURSOR_LEFT]: pressed -> released
+[18:47:24] [glfw] - info: button transition [CURSOR_LEFT]: released -> pressed
+[18:47:24] [glfw] - info: button transition [CURSOR_LEFT]: pressed -> released
+[18:47:24] [glfw] - info: cursor scroll: 0.000 1.000
+[18:47:26] [glfw] - info: cursor has left the content area
+[18:47:26] [glfw] - info: cursor has entered the content area
+[18:47:31] [glfw] - info: cursor has left the content area
+[18:47:32] [glfw] - info: cursor has entered the content area
+[18:47:32] [glfw] - info: button transition [S]: released -> pressed
+[18:47:33] [glfw] - info: button transition [S]: pressed -> released
+[18:47:33] [glfw] - info: button transition [S]: released -> pressed
+[18:47:33] [glfw] - info: button transition [S]: pressed -> released
+[18:47:33] [glfw] - info: button transition [S]: released -> pressed
+[18:47:33] [glfw] - info: button transition [S]: pressed -> released
+[18:47:34] [glfw] - info: button transition [SET_CLIPBOARD]: released -> pressed
+[18:47:34] [glfw] - info: copied to clipboard: whaaat
+[18:47:34] [glfw] - info: button transition [SET_CLIPBOARD]: pressed -> released
+[18:47:34] [glfw] - info: button transition [GET_CLIPBOARD]: released -> pressed
+[18:47:34] [glfw] - info: paste from clipboard: whaaat
+[18:47:34] [glfw] - info: button transition [GET_CLIPBOARD]: pressed -> released
+[18:47:35] [glfw] - info: button transition [GET_CLIPBOARD]: released -> pressed
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: paste from clipboard: whaaat
+[18:47:35] [glfw] - info: button transition [GET_CLIPBOARD]: pressed -> released
+[18:47:37] [glfw] - info: button transition [WINDOW_CLOSE]: released -> pressed

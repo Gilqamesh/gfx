@@ -45,7 +45,7 @@ void system__init() {
 # elif defined(LINUX) || defined(MAC)
     struct timespec res;
     clock_getres(CLOCK_REALTIME, &res);
-    g_tick_resolution = res.tv_sec + res.tv_nsec / 1000000000.0;
+    g_tick_resolution = (double) res.tv_sec + res.tv_nsec / 1000000000.0;
 # endif
 
     // todo: What about context caching?
@@ -64,14 +64,14 @@ void system__init() {
     g_get_time_epsilon_overhead = get_time_epsilon_overhead;
 }
 
-void system__sleep(uint32_t s) {
-    system__usleep(s * 1000 * 1000);
+void system__sleep(double s) {
+    system__usleep(s * 1000000.0);
 }
 
-void system__usleep(uint64_t us) {
+void system__usleep(double us) {
     const double time_end = system__get_time() + us / 1000000.0;
 
-    uint64_t ms = us / 1000;
+    uint64_t ms = (uint64_t) us / 1000;
     const uint64_t ms_granularity = 100;
     if (ms > ms_granularity) {
         system__platform_msleep(ms - ms_granularity);

@@ -109,6 +109,17 @@ void window__set_size_limit(
 // @note set either to 0 to disable enforcing aspect ratio
 void window__set_aspect_ratio(window_t self, uint32_t num, uint32_t den);
 
+/**
+ * @returns current content of the system's clipboard if it is convertible to a UTF-8 encoded string
+ * @note the lifetime of the string is valid until the next call to window__get_clipboard or window__set_clipboard
+*/
+const char* window__get_clipboard(window_t self);
+
+/**
+ * @brief sets system's clipboard as a UTF-8 encoded string
+*/
+void window__set_clipboard(window_t self, const char* str);
+
 /********************************************************************************
  * Virtual button API
  ********************************************************************************/
@@ -127,8 +138,12 @@ enum button {
     BUTTON_N, BUTTON_O, BUTTON_P, BUTTON_Q, BUTTON_R, BUTTON_S, BUTTON_T, BUTTON_U, BUTTON_V, BUTTON_W, BUTTON_X, BUTTON_Y, BUTTON_Z,
 
     BUTTON_LEFT, BUTTON_UP, BUTTON_RIGHT, BUTTON_DOWN,
-    BUTTON_CAPS_LOCK,
-    BUTTON_SHIFT,
+    BUTTON_CAPS_LOCK, BUTTON_SHIFT,
+    BUTTON_SPACE, BUTTON_BACKSPACE,
+    BUTTON_ENTER,
+
+    BUTTON_FPS_LOCK_INC /* default: alt + + */,
+    BUTTON_FPS_LOCK_DEC /* default: alt + - */,
 
     BUTTON_WINDOW_CLOSE /* default: esc, alt+f4 */,
     BUTTON_WINDOW_MINIMIZE,
@@ -138,9 +153,20 @@ enum button {
 
     BUTTON_DEBUG_INFO_MESSAGE_TOGGLE /* default: alt + i */,
 
+    BUTTON_GAMEPAD_A, BUTTON_GAMEPAD_B, BUTTON_GAMEPAD_X, BUTTON_GAMEPAD_Y,
+    BUTTON_GAMEPAD_LEFT_BUMPER, BUTTON_GAMEPAD_RIGHT_BUMPER, BUTTON_GAMEPAD_BACK,
+    BUTTON_GAMEPAD_START, BUTTON_GAMEPAD_GUIDE, BUTTON_GAMEPAD_LEFT_THUMB, BUTTON_GAMEPAD_RIGHT_THUMB,
+    BUTTON_GAMEPAD_DPAD_UP, BUTTON_GAMEPAD_DPAD_RIGHT, BUTTON_GAMEPAD_DPAD_DOWN, BUTTON_GAMEPAD_DPAD_LEFT,
+
+    BUTTON_GAMEPAD_AXIS_LEFT_X, BUTTON_GAMEPAD_AXIS_LEFT_Y, BUTTON_GAMEPAD_AXIS_RIGHT_X, BUTTON_GAMEPAD_AXIS_RIGHT_Y,
+    BUTTON_GAMEPAD_AXIS_LEFT_TRIGGER, BUTTON_GAMEPAD_AXIS_RIGHT_TRIGGER,
+
     BUTTON_CURSOR_LEFT,
     BUTTON_CURSOR_RIGHT,
     BUTTON_CURSOR_MIDDLE,
+
+    BUTTON_GET_CLIPBOARD /* default: ctrl + v */,
+    BUTTON_SET_CLIPBOARD /* default: ctrl + c */,
 
     _BUTTON_SIZE
 };
@@ -152,6 +178,8 @@ uint32_t window__button_n_of_repeats(window_t self, button_t button);
 
 // @brief number of press/release transitions
 uint32_t window__button_n_of_transitions(window_t self, button_t button);
+
+void window__button_register_action(window_t self, button_t button, void* user_pointer, void (*action_on_button_down)(void*));
 
 /********************************************************************************
  * Cursor API

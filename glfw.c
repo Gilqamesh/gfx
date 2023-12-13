@@ -1,6 +1,7 @@
 #include "glfw.h"
 
 #include "debug.h"
+#include "helper_macros.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +9,8 @@
 struct button_state {
     uint32_t n_of_transitions;
     uint32_t n_of_repeats;
-    void     (*action_on_key_down_fn)(window_t);
+    void     (*action_on_button_down)(void*);
+    void*    user_pointer;
     bool     ended_down;
 
     /**
@@ -21,6 +23,7 @@ typedef struct controller {
     button_state_t buttons[_BUTTON_SIZE];
     bool           is_connected;
     bool           received_button_input;
+    float          axes[ARRAY_SIZE(((GLFWgamepadstate*)(0))->axes)];
 } controller_t;
 
 typedef struct glfw {
@@ -38,6 +41,7 @@ glfw_t glfw;
 struct window {
     GLFWwindow* glfw_window;
     const char* title;
+    const char* clipboard;
 
     // todo: need to be saved to restore to windowed mode from fullscreen mode, but it doesn't do it properly atm
     int32_t  content_area_x;
@@ -51,7 +55,8 @@ struct window {
     controller_t controller;
 };
 
-static void glfw__prepare_for_poll_events();
+static void glfw__pre_poll_events();
+static void glfw__post_poll_events();
 static void glfw__error_callback(int code, const char* description);
 static void glfw__monitor_callback(GLFWmonitor* monitor, int event);
 static void glfw__controller_callback(int jid, int event);
@@ -67,30 +72,77 @@ static void window__focus_callback(GLFWwindow* glfw_window, int focused);
 static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_specific_scancode, int action, int mods);
 static void window__utf32_callback(GLFWwindow* window, uint32_t utf32);
 static void window__add_default_button_actions(window_t self);
-static void window__button_default_action_window_close(window_t self);
-static void window__button_default_action_window_minimize(window_t self);
-static void window__button_default_action_window_maximize(window_t self);
-static void window__button_default_action_window_windowed(window_t self);
-static void window__button_default_action_window_full_screen(window_t self);
-static void window__button_default_action_debug_info_message_toggle(window_t self);
+static void window__button_default_action_window_close(void* user_pointer);
+static void window__button_default_action_window_minimize(void* user_pointer);
+static void window__button_default_action_window_maximize(void* user_pointer);
+static void window__button_default_action_window_windowed(void* user_pointer);
+static void window__button_default_action_window_full_screen(void* user_pointer);
+static void window__button_default_action_debug_info_message_toggle(void* user_pointer);
+static void window__button_default_action_get_clipboard(void* user_pointer);
+static void window__button_default_action_set_clipboard(void* user_pointer);
 static void window__cursor_pos_callback(GLFWwindow* glfw_window, double x, double y);
 static void window__button_process_input(window_t self, button_t button, bool is_pressed);
 static void window__cursor_enter_callback(GLFWwindow* glfw_window, int entered);
 static void window__cursor_button_callback(GLFWwindow* glfw_window, int button, int action, int mods);
 static void window__cursor_scroll_callback(GLFWwindow* glfw_window, double xoffset, double yoffset);
+static void window__drop_callback(GLFWwindow* glfw_window, int paths_size, const char** paths);
 static void controller__button_process_input(controller_t* self, button_t button, bool is_pressed);
+static void controller__button_process_axes(controller_t* self, button_t button, uint32_t axes_index, float value);
 static void controller__clear(controller_t* self);
 static void controller__set_connected(controller_t* self, bool value);
 static bool controller__get_connected(controller_t* self);
 
-static void glfw__prepare_for_poll_events() {
-    for (uint32_t controller_index = 0; controller_index < sizeof(glfw.controller) / sizeof(glfw.controller[0]); ++controller_index) {
+static void glfw__pre_poll_events() {
+    for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(glfw.controller); ++controller_index) {
         if (glfw.controller[controller_index].is_connected) {
             controller__clear(&glfw.controller[controller_index]);
         }
     }
     for (uint32_t window_index = 0; window_index < glfw.windows_top; ++window_index) {
         controller__clear(&glfw.windows[window_index]->controller);
+    }
+}
+
+static void glfw__post_poll_events() {
+    static button_t glfw_gamepad_button_to_button[ARRAY_SIZE(((GLFWgamepadstate*)(0))->buttons)] = {
+        [GLFW_GAMEPAD_BUTTON_A]             = BUTTON_GAMEPAD_A,
+        [GLFW_GAMEPAD_BUTTON_B]             = BUTTON_GAMEPAD_B,
+        [GLFW_GAMEPAD_BUTTON_X]             = BUTTON_GAMEPAD_X,
+        [GLFW_GAMEPAD_BUTTON_Y]             = BUTTON_GAMEPAD_Y,
+        [GLFW_GAMEPAD_BUTTON_LEFT_BUMPER]   = BUTTON_GAMEPAD_LEFT_BUMPER,
+        [GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER]  = BUTTON_GAMEPAD_RIGHT_BUMPER,
+        [GLFW_GAMEPAD_BUTTON_BACK]          = BUTTON_GAMEPAD_BACK,
+        [GLFW_GAMEPAD_BUTTON_START]         = BUTTON_GAMEPAD_START,
+        [GLFW_GAMEPAD_BUTTON_GUIDE]         = BUTTON_GAMEPAD_GUIDE,
+        [GLFW_GAMEPAD_BUTTON_LEFT_THUMB]    = BUTTON_GAMEPAD_LEFT_THUMB,
+        [GLFW_GAMEPAD_BUTTON_RIGHT_THUMB]   = BUTTON_GAMEPAD_RIGHT_THUMB,
+        [GLFW_GAMEPAD_BUTTON_DPAD_UP]       = BUTTON_GAMEPAD_DPAD_UP,
+        [GLFW_GAMEPAD_BUTTON_DPAD_RIGHT]    = BUTTON_GAMEPAD_DPAD_RIGHT,
+        [GLFW_GAMEPAD_BUTTON_DPAD_DOWN]     = BUTTON_GAMEPAD_DPAD_DOWN,
+        [GLFW_GAMEPAD_BUTTON_DPAD_LEFT]     = BUTTON_GAMEPAD_DPAD_LEFT
+    };
+    static button_t glfw_gamepad_axis_to_button[ARRAY_SIZE(((GLFWgamepadstate*)(0))->axes)] = {
+        [GLFW_GAMEPAD_AXIS_LEFT_X] = BUTTON_GAMEPAD_AXIS_LEFT_X,
+        [GLFW_GAMEPAD_AXIS_LEFT_Y] = BUTTON_GAMEPAD_AXIS_LEFT_Y,
+        [GLFW_GAMEPAD_AXIS_RIGHT_X] = BUTTON_GAMEPAD_AXIS_RIGHT_X,
+        [GLFW_GAMEPAD_AXIS_RIGHT_Y] = BUTTON_GAMEPAD_AXIS_RIGHT_Y,
+        [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] = BUTTON_GAMEPAD_AXIS_LEFT_TRIGGER,
+        [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] = BUTTON_GAMEPAD_AXIS_RIGHT_TRIGGER
+    };
+    for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(glfw.controller); ++controller_index) {
+        controller_t* controller = &glfw.controller[controller_index];
+        if (controller->is_connected) {
+            GLFWgamepadstate state;
+            glfwGetGamepadState(controller_index, &state);
+            for (uint32_t button_index = 0; button_index < ARRAY_SIZE(state.buttons); ++button_index) {
+                button_t button = glfw_gamepad_button_to_button[button_index];
+                controller__button_process_input(controller, button, state.buttons[button_index] == GLFW_PRESS);
+            }
+            for (uint32_t axis_index = 0; axis_index < ARRAY_SIZE(state.axes); ++axis_index) {
+                button_t button = glfw_gamepad_axis_to_button[axis_index];
+                controller__button_process_axes(controller, button, axis_index, state.axes[axis_index]);
+            }
+        }
     }
 }
 
@@ -107,7 +159,7 @@ static void glfw__monitor_callback(GLFWmonitor* monitor, int event) {
 }
 
 static void glfw__controller_callback(int jid, int event) {
-    ASSERT(jid >= 0 && (uint32_t) jid < sizeof(glfw.controller) / sizeof(glfw.controller[0]));
+    ASSERT(jid >= 0 && (uint32_t) jid < ARRAY_SIZE(glfw.controller));
     controller_t* controller = &glfw.controller[jid];
     const bool exists_gamepad_mapping = glfwJoystickIsGamepad(jid);
 
@@ -215,13 +267,29 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
     (void) is_caps_lock_enabled;
     (void) is_num_lock_enabled;
 
-    // map single key to button
     switch (key) {
     case GLFW_KEY_0: button = BUTTON_0; break ; case GLFW_KEY_1: button = BUTTON_1; break ; case GLFW_KEY_2: button = BUTTON_2; break ; case GLFW_KEY_3: button = BUTTON_3; break ; case GLFW_KEY_4: button = BUTTON_4; break ; case GLFW_KEY_5: button = BUTTON_5; break ; case GLFW_KEY_6: button = BUTTON_6; break ; case GLFW_KEY_7: button = BUTTON_7; break ; case GLFW_KEY_8: button = BUTTON_8; break ; case GLFW_KEY_9: button = BUTTON_9; break ;
-    case GLFW_KEY_A: button = BUTTON_A; break ; case GLFW_KEY_B: button = BUTTON_B; break ; case GLFW_KEY_C: button = BUTTON_C; break ; case GLFW_KEY_D: button = BUTTON_D; break ; case GLFW_KEY_E: button = BUTTON_E; break ; case GLFW_KEY_F: button = BUTTON_F; break ; case GLFW_KEY_G: button = BUTTON_G; break ; case GLFW_KEY_H: button = BUTTON_H; break ; case GLFW_KEY_I: button = BUTTON_I; break ; case GLFW_KEY_J: button = BUTTON_J; break ; case GLFW_KEY_K: button = BUTTON_K; break ; case GLFW_KEY_L: button = BUTTON_L; break ; case GLFW_KEY_M: button = BUTTON_M; break ;
-    case GLFW_KEY_N: button = BUTTON_N; break ; case GLFW_KEY_O: button = BUTTON_O; break ; case GLFW_KEY_P: button = BUTTON_P; break ; case GLFW_KEY_Q: button = BUTTON_Q; break ; case GLFW_KEY_R: button = BUTTON_R; break ; case GLFW_KEY_S: button = BUTTON_S; break ; case GLFW_KEY_T: button = BUTTON_T; break ; case GLFW_KEY_U: button = BUTTON_U; break ; case GLFW_KEY_V: button = BUTTON_V; break ; case GLFW_KEY_W: button = BUTTON_W; break ; case GLFW_KEY_X: button = BUTTON_X; break ; case GLFW_KEY_Y: button = BUTTON_Y; break ; case GLFW_KEY_Z: button = BUTTON_Z; break ;
+    case GLFW_KEY_A: button = BUTTON_A; break ; case GLFW_KEY_B: button = BUTTON_B; break ;
+    case GLFW_KEY_C: {
+        if (is_ctrl_down) {
+            button = BUTTON_SET_CLIPBOARD;
+        } else {
+            button = BUTTON_C;
+        }
+    } break ;
+    case GLFW_KEY_D: button = BUTTON_D; break ; case GLFW_KEY_E: button = BUTTON_E; break ; case GLFW_KEY_F: button = BUTTON_F; break ; case GLFW_KEY_G: button = BUTTON_G; break ; case GLFW_KEY_H: button = BUTTON_H; break ; case GLFW_KEY_I: button = BUTTON_I; break ; case GLFW_KEY_J: button = BUTTON_J; break ; case GLFW_KEY_K: button = BUTTON_K; break ; case GLFW_KEY_L: button = BUTTON_L; break ; case GLFW_KEY_M: button = BUTTON_M; break ;
+    case GLFW_KEY_N: button = BUTTON_N; break ; case GLFW_KEY_O: button = BUTTON_O; break ; case GLFW_KEY_P: button = BUTTON_P; break ; case GLFW_KEY_Q: button = BUTTON_Q; break ; case GLFW_KEY_R: button = BUTTON_R; break ; case GLFW_KEY_S: button = BUTTON_S; break ; case GLFW_KEY_T: button = BUTTON_T; break ; case GLFW_KEY_U: button = BUTTON_U; break ;
+    case GLFW_KEY_V: {
+        if (is_ctrl_down) {
+            button = BUTTON_GET_CLIPBOARD;
+        } else {
+            button = BUTTON_V;
+        }
+    } break ;
+    case GLFW_KEY_W: button = BUTTON_W; break ; case GLFW_KEY_X: button = BUTTON_X; break ; case GLFW_KEY_Y: button = BUTTON_Y; break ; case GLFW_KEY_Z: button = BUTTON_Z; break ;
     case GLFW_KEY_LEFT: button = BUTTON_LEFT; break ; case GLFW_KEY_UP: button = BUTTON_UP; break ; case GLFW_KEY_RIGHT: button = BUTTON_RIGHT; break ; case GLFW_KEY_DOWN: button = BUTTON_DOWN; break ;
     case GLFW_KEY_CAPS_LOCK: button = BUTTON_CAPS_LOCK; break ; case GLFW_KEY_LEFT_SHIFT: button = BUTTON_SHIFT; break ; case GLFW_KEY_RIGHT_SHIFT: button = BUTTON_SHIFT; break ;
+    case GLFW_KEY_SPACE: button = BUTTON_SPACE; break ; case GLFW_KEY_BACKSPACE: button = BUTTON_BACKSPACE; break ;
     case GLFW_KEY_ESCAPE: {
         button = BUTTON_WINDOW_CLOSE;
     } break ;
@@ -237,6 +305,18 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
             } else {
                 button = BUTTON_WINDOW_WINDOWED;
             }
+        } else {
+            button = BUTTON_ENTER;
+        }
+    } break ;
+    case GLFW_KEY_EQUAL: {
+        if (is_alt_down) {
+            button = BUTTON_FPS_LOCK_INC;
+        }
+    } break ;
+    case GLFW_KEY_MINUS: {
+        if (is_alt_down) {
+            button = BUTTON_FPS_LOCK_DEC;
         }
     } break ;
     }
@@ -257,39 +337,70 @@ static void window__utf32_callback(GLFWwindow* window, uint32_t utf32) {
     (void) utf32;
 }
 
-static void window__add_default_button_actions(window_t window) {
-    window->controller.buttons[BUTTON_WINDOW_CLOSE].action_on_key_down_fn = &window__button_default_action_window_close;
-    window->controller.buttons[BUTTON_WINDOW_MINIMIZE].action_on_key_down_fn = &window__button_default_action_window_minimize;
-    window->controller.buttons[BUTTON_WINDOW_MAXIMIZE].action_on_key_down_fn = &window__button_default_action_window_maximize;
-    window->controller.buttons[BUTTON_WINDOW_WINDOWED].action_on_key_down_fn = &window__button_default_action_window_windowed;
-    window->controller.buttons[BUTTON_WINDOW_FULL_SCREEN].action_on_key_down_fn = &window__button_default_action_window_full_screen;
-    window->controller.buttons[BUTTON_DEBUG_INFO_MESSAGE_TOGGLE].action_on_key_down_fn = &window__button_default_action_debug_info_message_toggle;
+static void window__add_default_button_actions(window_t self) {
+    window__button_register_action(self, BUTTON_WINDOW_CLOSE, (void*) self, &window__button_default_action_window_close);    
+    window__button_register_action(self, BUTTON_WINDOW_CLOSE, (void*) self, &window__button_default_action_window_close);
+    window__button_register_action(self, BUTTON_WINDOW_MINIMIZE, (void*) self, &window__button_default_action_window_minimize);
+    window__button_register_action(self, BUTTON_WINDOW_MAXIMIZE, (void*) self, &window__button_default_action_window_maximize);
+    window__button_register_action(self, BUTTON_WINDOW_WINDOWED, (void*) self, &window__button_default_action_window_windowed);
+    window__button_register_action(self, BUTTON_WINDOW_FULL_SCREEN, (void*) self, &window__button_default_action_window_full_screen);
+    window__button_register_action(self, BUTTON_DEBUG_INFO_MESSAGE_TOGGLE, (void*) self, &window__button_default_action_debug_info_message_toggle);
+    window__button_register_action(self, BUTTON_GET_CLIPBOARD, (void*) self, &window__button_default_action_get_clipboard);
+    window__button_register_action(self, BUTTON_SET_CLIPBOARD, (void*) self, &window__button_default_action_set_clipboard);
 }
 
-static void window__button_default_action_window_close(window_t self) {
-    window__set_should_close(self, true);
+static void window__button_default_action_window_close(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+
+    window__set_should_close(window, true);
 }
 
-static void window__button_default_action_window_minimize(window_t self) {
-    window__set_state(self, WINDOW_STATE_MINIMIZED);
+static void window__button_default_action_window_minimize(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+
+    window__set_state(window, WINDOW_STATE_MINIMIZED);
 }
 
-static void window__button_default_action_window_maximize(window_t self) {
-    window__set_state(self, WINDOW_STATE_MAXIMIZED);
+static void window__button_default_action_window_maximize(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+
+    window__set_state(window, WINDOW_STATE_MAXIMIZED);
 }
 
-static void window__button_default_action_window_windowed(window_t self) {
-    window__set_state(self, WINDOW_STATE_WINDOWED);
+static void window__button_default_action_window_windowed(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+
+    window__set_state(window, WINDOW_STATE_WINDOWED);
 }
 
-static void window__button_default_action_window_full_screen(window_t self) {
-    window__set_state(self, WINDOW_STATE_FULL_SCREEN);
+static void window__button_default_action_window_full_screen(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+
+    window__set_state(window, WINDOW_STATE_FULL_SCREEN);
 }
 
-static void window__button_default_action_debug_info_message_toggle(window_t self) {
-    (void) self;
+static void window__button_default_action_debug_info_message_toggle(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+    (void) window;
 
     debug__set_message_type_availability(DEBUG_INFO, !debug__get_message_type_availability(DEBUG_INFO));
+}
+
+static void window__button_default_action_get_clipboard(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+
+    window->clipboard = window__get_clipboard(window);
+
+    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "paste from clipboard: %s", window->clipboard);
+}
+
+static void window__button_default_action_set_clipboard(void* user_pointer) {
+    window_t window = (window_t) user_pointer;
+
+    window->clipboard = "whaaat";
+    window__set_clipboard(window, window->clipboard);
+
+    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "copied to clipboard: %s", window->clipboard);
 }
 
 static void window__cursor_pos_callback(GLFWwindow* glfw_window, double x, double y) {
@@ -303,8 +414,8 @@ static void window__button_process_input(window_t self, button_t button, bool is
     controller__button_process_input(&self->controller, button, is_pressed);
 
     button_state_t* button_state = &self->controller.buttons[button];
-    if (is_pressed && button_state->action_on_key_down_fn) {
-        button_state->action_on_key_down_fn(self);
+    if (is_pressed && button_state->action_on_button_down) {
+        button_state->action_on_button_down(button_state->user_pointer);
     }
 }
 
@@ -356,6 +467,16 @@ static void window__cursor_scroll_callback(GLFWwindow* glfw_window, double xoffs
     debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "cursor scroll: %.3lf %.3lf", xoffset, yoffset);
 }
 
+static void window__drop_callback(GLFWwindow* glfw_window, int paths_size, const char** paths) {
+    (void) glfw_window;
+
+    debug__write("files dropped:");
+    for (uint32_t path_index = 0; path_index < (uint32_t) paths_size; ++path_index) {
+        debug__write("  %s", paths[path_index]);
+    }
+    debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
+}
+
 static void controller__button_process_input(controller_t* self, button_t button, bool is_pressed) {
     button_state_t* button_state = &self->buttons[button];
 
@@ -380,8 +501,26 @@ static void controller__button_process_input(controller_t* self, button_t button
     }
 }
 
+static void controller__button_process_axes(controller_t* self, button_t button, uint32_t axes_index, float value) {
+    button_state_t* button_state = &self->buttons[button];
+
+    ASSERT(axes_index < ARRAY_SIZE(self->axes));
+    if (self->axes[axes_index] != value) {
+        self->received_button_input = true;
+        ++button_state->n_of_transitions;
+        debug__write_and_flush(
+            DEBUG_MODULE_GLFW, DEBUG_INFO,
+            "axes transition [%s]: %f -> %f",
+            button__to_str(button),
+            self->axes[axes_index],
+            value
+        );
+        self->axes[axes_index] = value;
+    }
+}
+
 static void controller__clear(controller_t* self) {
-    for (uint32_t button_index = 0; button_index < sizeof(self->buttons) / sizeof(self->buttons[0]); ++button_index) {
+    for (uint32_t button_index = 0; button_index < ARRAY_SIZE(self->buttons); ++button_index) {
         self->buttons[button_index].n_of_repeats     = 0;
         self->buttons[button_index].n_of_transitions = 0;
     }
@@ -445,7 +584,7 @@ bool glfw__init() {
 
     debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
 
-    for (uint32_t controller_index = 0; controller_index < sizeof(glfw.controller) / sizeof(glfw.controller[0]); ++controller_index) {
+    for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(glfw.controller); ++controller_index) {
         if (glfwJoystickIsGamepad(controller_index)) {
             controller_t* controller = &glfw.controller[controller_index];
             controller->name = glfwGetJoystickName(controller_index);
@@ -461,17 +600,27 @@ void glfw__deinit() {
 }
 
 void glfw__poll_events() {
-    glfw__prepare_for_poll_events();
+    glfw__pre_poll_events();
     glfwPollEvents();
+    glfw__post_poll_events();
 }
 
 void glfw__wait_events() {
-    glfw__prepare_for_poll_events();
+    glfw__pre_poll_events();
     glfwWaitEvents();
+    glfw__post_poll_events();
 }
 
 double glfw__get_time_s() {
     return glfwGetTime();
+}
+
+const char* window__get_clipboard(window_t self) {
+    return glfwGetClipboardString(self->glfw_window);
+}
+
+void window__set_clipboard(window_t self, const char* str) {
+    glfwSetClipboardString(self->glfw_window, str);
 }
 
 monitor_t* monitor__get_monitors(uint32_t* number_of_monitors) {
@@ -491,11 +640,17 @@ void monitor__get_work_area(monitor_t self, int32_t* x, int32_t* y, uint32_t* w,
 const char* button__to_str(button_t button) {
     switch (button) {
     case BUTTON_0: return "0"; case BUTTON_1: return "1"; case BUTTON_2: return "2"; case BUTTON_3: return "3"; case BUTTON_4: return "4"; case BUTTON_5: return "5"; case BUTTON_6: return "6"; case BUTTON_7: return "7"; case BUTTON_8: return "8"; case BUTTON_9: return "9";
-    case BUTTON_A: return "A"; case BUTTON_B: return "B"; case BUTTON_C: return "C"; case BUTTON_D: return "D"; case BUTTON_E: return "E"; case BUTTON_F: return "F"; case BUTTON_G: return "G"; case BUTTON_H: return "H"; case BUTTON_I: return "I"; case BUTTON_J: return "J"; case BUTTON_K: return "K"; case BUTTON_L: return "L"; case BUTTON_M: return "M";
+    case BUTTON_A: return "A"; case BUTTON_B: return "B";
+    case BUTTON_C: return "C"; case BUTTON_D: return "D"; case BUTTON_E: return "E"; case BUTTON_F: return "F"; case BUTTON_G: return "G"; case BUTTON_H: return "H"; case BUTTON_I: return "I"; case BUTTON_J: return "J"; case BUTTON_K: return "K"; case BUTTON_L: return "L"; case BUTTON_M: return "M";
     case BUTTON_N: return "N"; case BUTTON_O: return "O"; case BUTTON_P: return "P"; case BUTTON_Q: return "Q"; case BUTTON_R: return "R"; case BUTTON_S: return "S"; case BUTTON_T: return "T"; case BUTTON_U: return "U"; case BUTTON_V: return "V"; case BUTTON_W: return "W"; case BUTTON_X: return "X"; case BUTTON_Y: return "Y"; case BUTTON_Z: return "Z";
 
     case BUTTON_LEFT: return "LEFT"; case BUTTON_UP: return "UP"; case BUTTON_RIGHT: return "RIGHT"; case BUTTON_DOWN: return "DOWN";
     case BUTTON_CAPS_LOCK: return "CAPS_LOCK"; case BUTTON_SHIFT: return "SHIFT";
+    case BUTTON_SPACE: return "SPACE"; case BUTTON_BACKSPACE: return "BACK_SPACE";
+    case BUTTON_ENTER: return "ENTER";
+
+    case BUTTON_FPS_LOCK_INC: return "FPS_LOCK_INC";
+    case BUTTON_FPS_LOCK_DEC: return "FPS_LOCK_DEC";
 
     case BUTTON_WINDOW_CLOSE: return "WINDOW_CLOSE";
     case BUTTON_WINDOW_MINIMIZE: return "WINDOW_MINIMIZE";
@@ -505,9 +660,20 @@ const char* button__to_str(button_t button) {
 
     case BUTTON_DEBUG_INFO_MESSAGE_TOGGLE: return "DEBUG_INFO_MESSAGE_TOGGLE";
 
+    case BUTTON_GAMEPAD_A: return "GAMEPAD_A"; case BUTTON_GAMEPAD_B: return "GAMEPAD_B"; case BUTTON_GAMEPAD_X: return "GAMEPAD_X"; case BUTTON_GAMEPAD_Y: return "GAMEPAD_Y";
+    case BUTTON_GAMEPAD_LEFT_BUMPER: return "GAMEPAD_LEFT_BUMPER"; case BUTTON_GAMEPAD_RIGHT_BUMPER: return "GAMEPAD_RIGHT_BUMPER"; case BUTTON_GAMEPAD_BACK: return "GAMEPAD_BACK";
+    case BUTTON_GAMEPAD_START: return "GAMEPAD_START"; case BUTTON_GAMEPAD_GUIDE: return "GAMEPAD_GUIDE"; case BUTTON_GAMEPAD_LEFT_THUMB: return "GAMEPAD_LEFT_THUMB"; case BUTTON_GAMEPAD_RIGHT_THUMB: return "GAMEPAD_RIGHT_THUMB";
+    case BUTTON_GAMEPAD_DPAD_UP: return "GAMEPAD_DPAD_UP"; case BUTTON_GAMEPAD_DPAD_RIGHT: return "GAMEPAD_DPAD_RIGHT"; case BUTTON_GAMEPAD_DPAD_DOWN: return "GAMEPAD_DPAD_DOWN"; case BUTTON_GAMEPAD_DPAD_LEFT: return "GAMEPAD_DPAD_LEFT";
+    
+    case BUTTON_GAMEPAD_AXIS_LEFT_X: return "GAMEPAD_AXIS_LEFT_X"; case BUTTON_GAMEPAD_AXIS_LEFT_Y: return "GAMEPAD_AXIS_LEFT_Y"; case BUTTON_GAMEPAD_AXIS_RIGHT_X: return "GAMEPAD_AXIS_RIGHT_X"; case BUTTON_GAMEPAD_AXIS_RIGHT_Y: return "GAMEPAD_AXIS_RIGHT_Y";
+    case BUTTON_GAMEPAD_AXIS_LEFT_TRIGGER: return "GAMEPAD_AXIS_LEFT_TRIGGER"; case BUTTON_GAMEPAD_AXIS_RIGHT_TRIGGER: return "GAMEPAD_AXIS_RIGHT_TRIGGER";
+
     case BUTTON_CURSOR_LEFT: return "CURSOR_LEFT";
     case BUTTON_CURSOR_RIGHT: return "CURSOR_RIGHT";
     case BUTTON_CURSOR_MIDDLE: return "CURSOR_MIDDLE";
+
+    case BUTTON_GET_CLIPBOARD: return "GET_CLIPBOARD";
+    case BUTTON_SET_CLIPBOARD: return "SET_CLIPBOARD";
 
     default: ASSERT(false);
     }
@@ -586,6 +752,7 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
         glfwSetCursorEnterCallback(result->glfw_window, &window__cursor_enter_callback);
         glfwSetMouseButtonCallback(result->glfw_window, &window__cursor_button_callback);
         glfwSetScrollCallback(result->glfw_window, &window__cursor_scroll_callback);
+        glfwSetDropCallback(result->glfw_window, &window__drop_callback);
 
         window__get_content_area_size(result, &result->content_area_w, &result->content_area_h);
         window__get_content_area_pos(result, &result->content_area_x, &result->content_area_y);
@@ -852,6 +1019,11 @@ uint32_t window__button_n_of_repeats(window_t self, button_t button) {
 uint32_t window__button_n_of_transitions(window_t self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
     return self->controller.buttons[button].n_of_transitions;
+}
+
+void window__button_register_action(window_t self, button_t button, void* user_pointer, void (*action_on_button_down)(void*)) {
+    self->controller.buttons[button].action_on_button_down = action_on_button_down;
+    self->controller.buttons[button].user_pointer          = user_pointer;
 }
 
 void window__set_cursor_state(window_t self, cursor_state_t state) {

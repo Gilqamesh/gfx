@@ -7,10 +7,10 @@ int main(int argc, char* argv[]) {
     }
     // debug__set_message_type_availability(DEBUG_INFO, false);
 
-    app_t app;
-    if (app__create(&app, argc, argv)) {
-        app__run(&app);
-        app__destroy(&app);
+    app_t app = app__create(argc, argv);
+    if (app) {
+        app__run(app);
+        app__destroy(app);
     }
 
     debug__deinit_module();
