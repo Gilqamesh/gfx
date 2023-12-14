@@ -1,38 +1,28 @@
-[19:23:36] [glfw] - info: 
+[19:37:12] [glfw] - info: 
   version string: 3.4.0 Wayland X11 GLX Null EGL OSMesa monotonic
   compiled version: 3.4.0
   runtime version: 3.4.0
   number of connected monitors: 1
     0: eDP-1 - physical size: 380x210 [mm]
-[19:23:36] [glfw] - info: controller [Title] is connected
-[19:23:36] [glfw] - info: controller [Debug window] is connected
-[19:23:36] [gl] - error: 
-  target fps: 60.000000
-  window Title: content area's position changed to: 200 269
-  window Title: content area's position changed to: 200 269
-  window Title: has gained input focus
-  window Title: has lost input focus
-  window Title: content area's position changed to: 200 269
-  window Title: content area's position changed to: 200 269
-  window Title: has gained input focus
-  window Title: has lost input focus
-  window Title: has gained input focus
-  window Title: has lost input focus
-  window Title: has gained input focus
-  window Title: framebuffer dimensions changed to: 500px 500px
-  window Title: content area's size changed to: 500 500
-  adjusted expected updates: 100.000000 -> 66.666667 [updates / s]
+[19:37:12] [glfw] - info: controller [Title] is connected
+[19:37:12] [glfw] - info: controller [Debug window] is connected
+[19:37:12] [gl] - error: 
   source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
   type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
   severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
   message:  Shader Stats: SGPRS: 24 VGPRS: 8 Code Size: 148 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 0 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (CS, W64)
-[19:23:36] [gl] - error: 
+[19:37:12] [gl] - error: 
   source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
   type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
   severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
   message:  Shader Stats: SGPRS: 8 VGPRS: 8 Code Size: 52 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 1 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (PS, W32)
-[19:23:36] [gl] - error: 
+[19:37:12] [gl] - error: 
   source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
   type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
   severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
   message:  Shader Stats: SGPRS: 16 VGPRS: 16 Code Size: 132 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 0 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (VS, W32)
+[19:37:12] [gl] - error: 
+  source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
+  type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
+  severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
+  message:  Shader Stats: SGPRS: 8 VGPRS: 8 Code Size: 20 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 1 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (PS, W64)

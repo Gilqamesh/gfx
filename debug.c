@@ -48,6 +48,7 @@ void debug__write(const char* format, ...) {
 
 void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...) {
     if (!debug__get_message_type_availability(message_type)) {
+        buffer__clear(&debug.buffer);
         return ;
     }
 
@@ -66,6 +67,8 @@ void debug__flush(debug_module_t module, debug_message_type_t message_type) {
         !debug__get_message_module_availability(module) ||
         !debug__get_message_type_availability(message_type)
     ) {
+        buffer__clear(&debug.buffer);
+        debug.number_of_lines = 0;
         return ;
     }
 
