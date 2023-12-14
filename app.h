@@ -1,11 +1,6 @@
 #ifndef APP_H
 # define APP_H
 
-# include <stdbool.h>
-# include <stdint.h>
-
-# include "glfw.h"
-
 struct app;
 typedef struct app* app_t;
 

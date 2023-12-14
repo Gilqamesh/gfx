@@ -13,4 +13,7 @@
 #  error "platform unsupported"
 # endif
 
+# define MAX(x, y) ((x) < (y) ? (y) : (x))
+# define MIN(x, y) ((x) < (y) ? (x) : (y))
+
 #endif // HELPER_MACROS_H

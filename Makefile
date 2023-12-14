@@ -7,6 +7,7 @@ common_src = \
 	debug.c \
 	buffer.c \
 	system.c \
+	gl.c \
 	glad/src/glad.c
 src = \
 	$(common_src) \
