@@ -31,11 +31,16 @@ typedef struct glfw {
 glfw_t glfw;
 
 struct window {
-    GLFWwindow* glfw_window;
-    const char* title;
-    const char* clipboard;
+    GLFWwindow*    glfw_window;
+    const char*    title;
+    const char*    clipboard;
 
-    // todo: need to be saved to restore to windowed mode from fullscreen mode, but it doesn't do it properly atm
+    window_display_state_t requested_display_state;
+    bool                   transitioning;
+
+    /**
+     * @note to transition back to WINDOW_DISPLAY_STATE_WINDOWED
+     */
     int32_t  content_area_x;
     int32_t  content_area_y;
     uint32_t content_area_w;
@@ -49,6 +54,9 @@ struct window {
 
 static void glfw__pre_poll_events();
 static void glfw__post_poll_events();
+static void glfw__post_poll_event_poll_controllers();
+static void glfw__post_poll_event_handle_window_display_state_transitions();
+static void window__display_state_transition(window_t self);
 static void glfw__error_callback(int code, const char* description);
 static void glfw__monitor_callback(GLFWmonitor* monitor, int event);
 static void glfw__controller_callback(int jid, int event);
@@ -83,6 +91,13 @@ static void controller__button_process_axes(controller_t* self, button_t button,
 static void controller__clear(controller_t* self);
 static void controller__set_connected(controller_t* self, bool value);
 static bool controller__get_connected(controller_t* self);
+static void window__set_fullscreen(window_t self, bool value);
+static bool window__get_fullscreen(window_t self);
+static void window__set_minimized(window_t self, bool value);
+static bool window__get_minimized(window_t self);
+static void window__set_maximized(window_t self, bool value);
+static bool window__get_maximized(window_t self);
+static void window__restore_content_area(window_t self);
 
 static void glfw__pre_poll_events() {
     for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(glfw.controller); ++controller_index) {
@@ -91,11 +106,22 @@ static void glfw__pre_poll_events() {
         }
     }
     for (uint32_t window_index = 0; window_index < glfw.windows_top; ++window_index) {
-        controller__clear(&glfw.windows[window_index]->controller);
+        window_t window = glfw.windows[window_index];
+        controller__clear(&window->controller);
+
+        if (window__get_display_state(window) == WINDOW_DISPLAY_STATE_WINDOWED) {
+            glfwGetWindowPos(window->glfw_window, &window->content_area_x, &window->content_area_y);
+            glfwGetWindowSize(window->glfw_window, (int32_t*) &window->content_area_w, (int32_t*) &window->content_area_h);
+        }
     }
 }
 
 static void glfw__post_poll_events() {
+    glfw__post_poll_event_poll_controllers();
+    glfw__post_poll_event_handle_window_display_state_transitions();
+}
+
+static void glfw__post_poll_event_poll_controllers() {
     static button_t glfw_gamepad_button_to_button[ARRAY_SIZE(((GLFWgamepadstate*)(0))->buttons)] = {
         [GLFW_GAMEPAD_BUTTON_A]             = BUTTON_GAMEPAD_A,
         [GLFW_GAMEPAD_BUTTON_B]             = BUTTON_GAMEPAD_B,
@@ -138,6 +164,184 @@ static void glfw__post_poll_events() {
     }
 }
 
+static void glfw__post_poll_event_handle_window_display_state_transitions() {
+    for (uint32_t window_index = 0; window_index < glfw.windows_top; ++window_index) {
+        window_t window = glfw.windows[window_index];
+        window__display_state_transition(window);
+    }
+}
+
+static void window__display_state_transition(window_t self) {
+    const window_display_state_t current_state  = window__get_display_state(self);
+    const window_display_state_t new_state      = self->requested_display_state;
+
+    const bool was_hidden = window__get_hidden(self);
+    if (!was_hidden) {
+        window__set_hidden(self, true);
+    }
+
+    if (current_state == new_state) {
+        return ;
+    }
+
+    /*
+    states:
+        windowed   normal
+        windowed   minimized
+        windowed   maximized
+        fullscreen normal
+        fullscreen minimized
+
+    state transitions:                                  Apply
+        windowed normal      -> windowed minimized      minimize(true)
+        windowed normal      -> windowed maximized      maximize(true)
+        windowed normal      -> fullscreen normal       fullscreen(true)
+        windowed normal      -> fullscreen minimized    fullscreen(true) -> minimize(true)
+
+        windowed minimized   -> windowed normal         minimize(false) -> restore content area
+        windowed minimized   -> windowed maximized      minimize(false) -> maximize(true)
+        windowed minimized   -> fullscreen normal       minimize(false) -> fullscreen(true)
+        windowed minimized   -> fullscreen minimized    minimize(false) -> fullscreen(true) -> minimize(true)
+
+        windowed maximized   -> windowed normal         maximize(false) -> restore content area
+        windowed maximized   -> windowed minimized      maximize(false) -> minimize(true)
+        windowed maximized   -> fullscreen normal       maximize(false) -> fullscreen(true)
+        windowed maximized   -> fullscreen minimized    maximize(false) -> fullscreen(true) -> minimize(true)
+
+        fullscreen normal    -> windowed normal         fullscreen(false) -> maximize(true) -> schedule windowed normal (windowed maximized -> windowed normal) 
+        fullscreen normal    -> windowed minimized      fullscreen(false) -> minimize(true)
+        fullscreen normal    -> windowed maximized      fullscreen(false) -> maximize(true)
+        fullscreen normal    -> fullscreen minimized    minimize(true)
+
+        fullscreen minimized -> windowed normal         minimize(false) -> fullscreen(false) -> restore content area
+        fullscreen minimized -> windowed minimized      minimize(false) -> fullscreen(false) -> minimize(true)
+        fullscreen minimized -> windowed maximized      minimize(false) -> fullscreen(false) -> maximize(true)
+        fullscreen minimized -> fullscreen normal       minimize(false)
+    */
+
+    switch (current_state) {
+    case WINDOW_DISPLAY_STATE_WINDOWED: {
+        switch (new_state) {
+        case WINDOW_DISPLAY_STATE_WINDOWED: {
+            ASSERT(false);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED: {
+            window__set_minimized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED: {
+            window__set_maximized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_FULLSCREEN: {
+            window__set_fullscreen(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN: {
+            window__set_fullscreen(self, true);
+            window__set_minimized(self, true);
+        } break ;
+        default: ASSERT(false);
+        }
+    } break ;
+    case WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED: {
+        window__set_minimized(self, false);
+
+        switch (new_state) {
+        case WINDOW_DISPLAY_STATE_WINDOWED: {
+            window__restore_content_area(self);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED: {
+            ASSERT(false);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED: {
+            window__set_maximized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_FULLSCREEN: {
+            window__set_fullscreen(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN: {
+            window__set_fullscreen(self, true);
+            window__set_minimized(self, true);
+        } break ;
+        default: ASSERT(false);
+        }
+    } break ;
+    case WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED: {
+        window__set_maximized(self, false);
+
+        switch (new_state) {
+        case WINDOW_DISPLAY_STATE_WINDOWED: {
+            window__restore_content_area(self);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED: {
+            window__set_minimized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED: {
+            ASSERT(false);
+        } break ;
+        case WINDOW_DISPLAY_STATE_FULLSCREEN: {
+            window__set_fullscreen(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN: {
+            window__set_fullscreen(self, true);
+            window__set_minimized(self, true);
+        } break ;
+        default: ASSERT(false);
+        }
+    } break ;
+    case WINDOW_DISPLAY_STATE_FULLSCREEN: {
+        switch (new_state) {
+        case WINDOW_DISPLAY_STATE_WINDOWED: {
+            window__set_fullscreen(self, false);
+            window__set_maximized(self, true);
+            self->requested_display_state = WINDOW_DISPLAY_STATE_WINDOWED;
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED: {
+            window__set_fullscreen(self, false);
+            window__set_minimized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED: {
+            window__set_fullscreen(self, false);
+            window__set_maximized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_FULLSCREEN: {
+            ASSERT(false);
+        } break ;
+        case WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN: {
+            window__set_minimized(self, true);
+        } break ;
+        default: ASSERT(false);
+        }
+    } break ;
+    case WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN: {
+        window__set_minimized(self, false);
+        switch (new_state) {
+        case WINDOW_DISPLAY_STATE_WINDOWED: {
+            window__set_fullscreen(self, false);
+            window__restore_content_area(self);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED: {
+            window__set_fullscreen(self, false);
+            window__set_minimized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED: {
+            window__set_fullscreen(self, false);
+            window__set_maximized(self, true);
+        } break ;
+        case WINDOW_DISPLAY_STATE_FULLSCREEN: {
+        } break ;
+        case WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN: {
+            ASSERT(false);
+        } break ;
+        default: ASSERT(false);
+        }
+    } break ;
+    default: ASSERT(false);
+    }
+
+    if (!was_hidden) {
+        window__set_hidden(self, false);
+    }
+}
+
 static void glfw__error_callback(int code, const char* description) {
     debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_ERROR, "code: [%d], description: [%s]", code, description);
 }
@@ -173,21 +377,13 @@ static void window__should_close_callback(GLFWwindow* glfw_window) {
 
 static void window__pos_changed_callback(GLFWwindow* glfw_window, int x, int y) {
     window_t window = window__from_glfw_window(glfw_window);
-    if (window__get_state(window) == WINDOW_STATE_WINDOWED) {
-        window__get_content_area_pos(window, &x, &y);
-        window->content_area_x = x;
-        window->content_area_y = y;
-    }
+
     debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: content area's position changed to: %d %d", window->title, x, y);
 }
 
 static void window__size_changed_callback(GLFWwindow* glfw_window, int width, int height) {
     window_t window = window__from_glfw_window(glfw_window);
-    if (window__get_state(window) == WINDOW_STATE_WINDOWED) {
-        window__get_content_area_size(window, &window->content_area_w, &window->content_area_h);
-        width  = window->content_area_w;
-        height = window->content_area_h;
-    }
+
     debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: content area's size changed to: %u %u", window->title, width, height);
 }
 
@@ -282,11 +478,30 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
         }
     } break ;
     case GLFW_KEY_W: button = BUTTON_W; break ; case GLFW_KEY_X: button = BUTTON_X; break ; case GLFW_KEY_Y: button = BUTTON_Y; break ; case GLFW_KEY_Z: button = BUTTON_Z; break ;
-    case GLFW_KEY_LEFT: button = BUTTON_LEFT; break ; case GLFW_KEY_UP: button = BUTTON_UP; break ; case GLFW_KEY_RIGHT: button = BUTTON_RIGHT; break ; case GLFW_KEY_DOWN: button = BUTTON_DOWN; break ;
+    case GLFW_KEY_LEFT: button = BUTTON_LEFT; break ;
+    case GLFW_KEY_UP: {
+        if (is_alt_down) {
+            button = BUTTON_WINDOW_MAXIMIZE;
+        } else {
+            button = BUTTON_UP;
+        }
+    } break ;
+    case GLFW_KEY_RIGHT: button = BUTTON_RIGHT; break ;
+    case GLFW_KEY_DOWN: {
+        if (is_alt_down) {
+            button = BUTTON_WINDOW_WINDOWED;
+        } else {
+            button = BUTTON_DOWN;
+        }
+    } break ;
     case GLFW_KEY_CAPS_LOCK: button = BUTTON_CAPS_LOCK; break ; case GLFW_KEY_LEFT_SHIFT: button = BUTTON_SHIFT; break ; case GLFW_KEY_RIGHT_SHIFT: button = BUTTON_SHIFT; break ;
     case GLFW_KEY_SPACE: button = BUTTON_SPACE; break ; case GLFW_KEY_BACKSPACE: button = BUTTON_BACKSPACE; break ;
     case GLFW_KEY_ESCAPE: {
-        button = BUTTON_WINDOW_CLOSE;
+        if (is_alt_down) {
+            button = BUTTON_WINDOW_MINIMIZE;
+        } else {
+            button = BUTTON_WINDOW_CLOSE;
+        }
     } break ;
     case GLFW_KEY_F4: {
         if (is_alt_down) {
@@ -295,11 +510,7 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
     } break ;
     case GLFW_KEY_ENTER: {
         if (is_alt_down) {
-            if (window__get_state(window) != WINDOW_STATE_FULL_SCREEN) {
-                button = BUTTON_WINDOW_FULL_SCREEN;
-            } else {
-                button = BUTTON_WINDOW_WINDOWED;
-            }
+            button = BUTTON_WINDOW_FULL_SCREEN;
         } else {
             button = BUTTON_ENTER;
         }
@@ -352,25 +563,29 @@ static void window__button_default_action_window_close(void* user_pointer) {
 static void window__button_default_action_window_minimize(void* user_pointer) {
     window_t window = (window_t) user_pointer;
 
-    window__set_state(window, WINDOW_STATE_MINIMIZED);
+    if (window__get_fullscreen(window)) {
+        window__set_display_state(window, WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN);
+    } else {
+        window__set_display_state(window, WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED);
+    }
 }
 
 static void window__button_default_action_window_maximize(void* user_pointer) {
     window_t window = (window_t) user_pointer;
 
-    window__set_state(window, WINDOW_STATE_MAXIMIZED);
+    window__set_display_state(window, WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED);
 }
 
 static void window__button_default_action_window_windowed(void* user_pointer) {
     window_t window = (window_t) user_pointer;
 
-    window__set_state(window, WINDOW_STATE_WINDOWED);
+    window__set_display_state(window, WINDOW_DISPLAY_STATE_WINDOWED);
 }
 
 static void window__button_default_action_window_full_screen(void* user_pointer) {
     window_t window = (window_t) user_pointer;
 
-    window__set_state(window, WINDOW_STATE_FULL_SCREEN);
+    window__set_display_state(window, WINDOW_DISPLAY_STATE_FULLSCREEN);
 }
 
 static void window__button_default_action_debug_info_message_toggle(void* user_pointer) {
@@ -483,8 +698,7 @@ static void controller__button_process_input(controller_t* self, button_t button
     ) {
         self->received_button_input = true;
         ++button_state->n_of_transitions;
-        debug__write_and_flush(
-            DEBUG_MODULE_GLFW, DEBUG_INFO,
+        debug__write(
             "button transition [%s]: %s -> %s",
             button__to_str(button),
             was_down ? "pressed" : "released",
@@ -493,7 +707,9 @@ static void controller__button_process_input(controller_t* self, button_t button
     }
     if (is_pressed) {
         ++button_state->n_of_repeats;
+        debug__write("button repeats %u", button_state->n_of_repeats);
     }
+    debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
 }
 
 static void controller__button_process_axes(controller_t* self, button_t button, uint32_t axes_index, float value) {
@@ -539,4 +755,58 @@ static void controller__set_connected(controller_t* self, bool value) {
 
 static bool controller__get_connected(controller_t* self) {
     return self->is_connected;
+}
+
+static void window__set_fullscreen(window_t self, bool value)  {
+    if (value) {
+        const GLFWvidmode* mode = glfwGetVideoMode(self->monitor);
+        glfwSetWindowMonitor(
+            self->glfw_window,
+            self->monitor,
+            0, 0,
+            mode->width, mode->height,
+            mode->refreshRate
+        );
+    } else {
+        glfwSetWindowMonitor(
+            self->glfw_window,
+            NULL,
+            self->content_area_x, self->content_area_y,
+            self->content_area_w, self->content_area_h,
+            GLFW_DONT_CARE
+        );
+    }
+}
+
+static bool window__get_fullscreen(window_t self) {
+    return glfwGetWindowMonitor(self->glfw_window) != 0;
+}
+
+static void window__set_minimized(window_t self, bool value) {
+    if (value) {
+        glfwIconifyWindow(self->glfw_window);
+    } else {
+        glfwRestoreWindow(self->glfw_window);
+    }
+}
+
+static bool window__get_minimized(window_t self) {
+    return glfwGetWindowAttrib(self->glfw_window, GLFW_ICONIFIED);
+}
+
+static void window__set_maximized(window_t self, bool value) {
+    if (value) {
+        glfwMaximizeWindow(self->glfw_window);
+    } else {
+        glfwRestoreWindow(self->glfw_window);
+    }
+}
+
+static bool window__get_maximized(window_t self) {
+    return glfwGetWindowAttrib(self->glfw_window, GLFW_MAXIMIZED);
+}
+
+static void window__restore_content_area(window_t self) {
+    glfwSetWindowPos(self->glfw_window, self->content_area_x, self->content_area_y);
+    glfwSetWindowSize(self->glfw_window, (int32_t) self->content_area_w, (int32_t) self->content_area_h);
 }

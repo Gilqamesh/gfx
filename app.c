@@ -67,23 +67,16 @@ void app__destroy(app_t self) {
 }
 
 void app__run(app_t self) {
-    debug__set_message_module_availability(DEBUG_MODULE_APP, false);
-    debug__set_message_module_availability(DEBUG_MODULE_GLFW, false);
+    // debug__set_message_module_availability(DEBUG_MODULE_APP, false);
+    debug__set_message_module_availability(DEBUG_MODULE_GL, false);
+    // debug__set_message_module_availability(DEBUG_MODULE_GLFW, false);
 
     window__set_current_window(self->debug_window);
-    window__set_window_opacity(self->debug_window, 0.89);
     window__destroy(self->debug_window);
 
     window__set_current_window(self->window);
-
-    const uint32_t min_w = 100;
-    const uint32_t min_h = 100;
-    const uint32_t max_w = 1000;
-    const uint32_t max_h = 1000;
-    window__set_size_limit(self->window, min_w, min_h, max_w, max_h);
-    window__set_content_area_size(self->window, max_w / 2, max_h / 2);
-    // window__set_fullscreen(self->window, true);
-
+    window__set_windowed_state_content_area(self->window, 100, 100, 500, 500);
+    window__set_display_state(self->window, WINDOW_DISPLAY_STATE_WINDOWED);
     window__set_window_opacity(self->window, 0.89);
 
     const double target_fps = 60.0;

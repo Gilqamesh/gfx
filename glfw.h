@@ -38,6 +38,23 @@ void monitor__get_work_area(monitor_t self, int32_t* x, int32_t* y, uint32_t* w,
  * Window API
  ********************************************************************************/
 
+/**
+ *  _________________________________      
+ * |         WINDOW FRAME            |    |
+ * |  _____________________________  |    |
+ * | |                             | |    |
+ * | |          CONTENT            | |    |
+ * | |                             | |    |   WINDOW AREA HEIGHT
+ * | |           AREA              | |    |
+ * | |                             | |    |
+ * | |                             | |    |
+ * | |_____________________________| |    |
+ * |_________________________________|    |
+ * 
+ * ___________________________________
+ *          WINDOW AREA WIDTH
+*/
+
 typedef struct window* window_t;
 
 // @brief creates and sets window as the current one
@@ -58,29 +75,40 @@ void window__swap_buffers(window_t self);
 
 void window__set_icon(window_t self, uint8_t* pixels, uint32_t w, uint32_t h);
 
-void window__set_content_area_size(window_t self, uint32_t width, uint32_t height);
-void window__get_content_area_size(window_t self, uint32_t* width, uint32_t* height);
-// @brief includes window frame
-void window__get_window_size(window_t self, uint32_t* width, uint32_t* height);
-void window__get_window_frame_size(window_t self, int32_t* left, int32_t* top, int32_t* right, int32_t* bottom);
+typedef enum window_display_state {
+    WINDOW_DISPLAY_STATE_WINDOWED,
+    WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED,
+    WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED,
+    WINDOW_DISPLAY_STATE_FULLSCREEN,
+    WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN
+} window_display_state_t;
 
-// @brief sets top left corner position in screen coordinates of the content area
-void window__set_content_area_pos(window_t self, int32_t x, int32_t y);
-void window__get_content_area_pos(window_t self, int32_t* x, int32_t* y);
-// @brief includes window frame
-void window__set_window_pos(window_t self, int32_t x, int32_t y);
-// @brief includes window frame
-void window__get_window_pos(window_t self, int32_t* x, int32_t* y);
+/**
+ * @brief set position and dimensions of the content area for window's WINDOW_DISPLAY_STATE_WINDOWED state
+ * @note does no state transitions
+*/
+void window__set_windowed_state_content_area(window_t self, int32_t x, int32_t y, uint32_t width, uint32_t height);
 
-typedef enum window_state {
-    WINDOW_STATE_MINIMIZED,
-    WINDOW_STATE_MAXIMIZED,
-    WINDOW_STATE_WINDOWED,
-    WINDOW_STATE_FULL_SCREEN
-} window_state_t;
+/**
+ * @brief get position and dimensions of the content area for window's WINDOW_DISPLAY_STATE_WINDOWED state
+ * @note the window could be in a different display state
+*/
+void window__get_windowed_state_content_area(window_t self, int32_t* x, int32_t* y, uint32_t* width, uint32_t* height);
 
-void window__set_state(window_t self, window_state_t state);
-window_state_t window__get_state(window_t self);
+/**
+ * @brief set position and dimensions of the window area for window's WINDOW_DISPLAY_STATE_WINDOWED state
+ * @note does no state transitions
+*/
+void window__set_windowed_state_window_area(window_t self, int32_t x, int32_t y, uint32_t width, uint32_t height);
+
+/**
+ * @brief get position and dimensions of the window area for window's WINDOW_DISPLAY_STATE_WINDOWED state
+ * @note the window could be in a different display state
+*/
+void window__get_windowed_state_window_area(window_t self, int32_t* x, int32_t* y, uint32_t* width, uint32_t* height);
+
+void window__set_display_state(window_t self, window_display_state_t state);
+window_display_state_t window__get_display_state(window_t self);
 
 void window__set_hidden(window_t self, bool value);
 bool window__get_hidden(window_t self);
@@ -145,9 +173,9 @@ enum button {
     BUTTON_FPS_LOCK_DEC /* default: alt + - */,
 
     BUTTON_WINDOW_CLOSE /* default: esc, alt+f4 */,
-    BUTTON_WINDOW_MINIMIZE,
-    BUTTON_WINDOW_MAXIMIZE,
-    BUTTON_WINDOW_WINDOWED,
+    BUTTON_WINDOW_MINIMIZE /* default: alt + esc      */,
+    BUTTON_WINDOW_MAXIMIZE /* default: alt + key-up   */,
+    BUTTON_WINDOW_WINDOWED /* default: alt + key-down */,
     BUTTON_WINDOW_FULL_SCREEN /* default: alt + enter */,
 
     BUTTON_DEBUG_INFO_MESSAGE_TOGGLE /* default: alt + i */,

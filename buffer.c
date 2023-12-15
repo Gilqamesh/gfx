@@ -43,8 +43,10 @@ void buffer__vwrite(buffer_t* self, const char* format, va_list ap) {
             bytes_left,
             bytes_written
         );
+        self->cur += bytes_left;
+    } else {
+        self->cur += bytes_written;
     }
-    self->cur += bytes_written;
 }
 
 void buffer__clear(buffer_t* self) {

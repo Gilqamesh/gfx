@@ -162,9 +162,10 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
     window_t result = glfw.windows[glfw.windows_top++];
     memset(result, 0, sizeof(*result));
 
-    result->title = title;
-    result->monitor = monitor;
-    result->controller.name = title;
+    result->title                   = title;
+    result->monitor                 = monitor;
+    result->controller.name         = title;
+    result->requested_display_state = WINDOW_DISPLAY_STATE_WINDOWED;
     controller__set_connected(&result->controller, true);
 
     // for faster window creation and application switching, choose the closest video mode available (relative to monitor)
@@ -215,8 +216,8 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
         glfwSetScrollCallback(result->glfw_window, &window__cursor_scroll_callback);
         glfwSetDropCallback(result->glfw_window, &window__drop_callback);
 
-        window__get_content_area_size(result, &result->content_area_w, &result->content_area_h);
-        window__get_content_area_pos(result, &result->content_area_x, &result->content_area_y);
+        glfwGetWindowPos(result->glfw_window, &result->content_area_x, &result->content_area_y);
+        glfwGetWindowSize(result->glfw_window, (int32_t*) &result->content_area_w, (int32_t*) &result->content_area_h);
     }
     window__set_hidden(result, false);
 
@@ -289,118 +290,77 @@ void window__set_icon(window_t self, uint8_t* pixels, uint32_t w, uint32_t h) {
     glfwSetWindowIcon(self->glfw_window, 1, &image);
 }
 
-void window__set_content_area_size(window_t self, uint32_t width, uint32_t height) {
-    glfwSetWindowSize(self->glfw_window, width, height);
+void window__set_windowed_state_content_area(window_t self, int32_t x, int32_t y, uint32_t width, uint32_t height) {
+    if (window__get_display_state(self) == WINDOW_DISPLAY_STATE_WINDOWED) {
+        const bool was_hidden = window__get_hidden(self);
+        if (!was_hidden) {
+            window__set_hidden(self, true);
+        }
+        
+        glfwSetWindowPos(self->glfw_window, x, y);
+        glfwSetWindowSize(self->glfw_window, (int32_t) width, (int32_t) height);
+        glfwGetWindowPos(self->glfw_window, &self->content_area_x, &self->content_area_y);
+        glfwGetWindowSize(self->glfw_window, (int32_t*) &self->content_area_w, (int32_t*) &self->content_area_h);
+
+        if (!was_hidden) {
+            window__set_hidden(self, false);
+        }
+    } else {
+        self->content_area_x = x;
+        self->content_area_y = y;
+        self->content_area_w = width;
+        self->content_area_h = height;
+    }
 }
 
-void window__get_content_area_size(window_t self, uint32_t* width, uint32_t* height) {
-    glfwGetWindowSize(self->glfw_window, (int32_t*) width, (int32_t*) height);
+void window__get_windowed_state_content_area(window_t self, int32_t* x, int32_t* y, uint32_t* width, uint32_t* height) {
+    *x      = self->content_area_x;
+    *y      = self->content_area_y;
+    *width  = self->content_area_w;
+    *height = self->content_area_h;
 }
 
-void window__get_window_size(window_t self, uint32_t* width, uint32_t* height) {
-    window__get_content_area_size(self, width, height);
-    int32_t left, top, right, bottom;
-    window__get_window_frame_size(self, &left, &top, &right, &bottom);
-    *width += left + right;
+void window__set_windowed_state_window_area(window_t self, int32_t x, int32_t y, uint32_t width, uint32_t height) {
+    int32_t left, right, top, bottom;
+    glfwGetWindowFrameSize(self->glfw_window, &left, &top, &right, &bottom);
+    x      -= left;
+    y      -= top;
+    width  += left + right;
+    height += top + bottom;
+    window__set_windowed_state_content_area(self, x, y, width, height);
+}
+
+void window__get_windowed_state_window_area(window_t self, int32_t* x, int32_t* y, uint32_t* width, uint32_t* height) {
+    int32_t left, right, top, bottom;
+    glfwGetWindowFrameSize(self->glfw_window, &left, &top, &right, &bottom);
+    window__get_windowed_state_content_area(self, x, y, width, height);
+    *x      -= left;
+    *y      -= top;
+    *width  += left + right;
     *height += top + bottom;
 }
 
-void window__get_window_frame_size(window_t self, int32_t* left, int32_t* top, int32_t* right, int32_t* bottom) {
-    glfwGetWindowFrameSize(self->glfw_window, left, top, right, bottom);
+void window__set_display_state(window_t self, window_display_state_t state) {
+    // note: limit the state change by delegating it and doing it once during event polling in order to avoid race conditions due to asynchronous event handling on some platforms (X11 for example)
+    self->requested_display_state = state;
 }
 
-void window__set_content_area_pos(window_t self, int32_t x, int32_t y) {
-    glfwSetWindowPos(self->glfw_window, x, y);
-}
-
-void window__get_content_area_pos(window_t self, int32_t* x, int32_t* y) {
-    glfwGetWindowPos(self->glfw_window, x, y);
-}
-
-void window__set_window_pos(window_t self, int32_t x, int32_t y) {
-    int32_t left, top, right, bottom;
-    window__get_window_frame_size(self, &left, &top, &right, &bottom);
-    window__set_content_area_pos(self, x + left, y + top);
-}
-
-void window__get_window_pos(window_t self, int32_t* x, int32_t* y) {
-    int32_t left, top, right, bottom;
-    window__get_window_frame_size(self, &left, &top, &right, &bottom);
-    window__get_content_area_pos(self, x, y);
-    *x -= left;
-    *y -= top;
-}
-
-void window__set_state(window_t self, window_state_t state) {
-    const bool was_hidden = window__get_hidden(self);
-    if (!was_hidden) {
-        window__set_hidden(self, true);
-    }
-
-    switch (state) {
-    case WINDOW_STATE_MINIMIZED: {
-        glfwIconifyWindow(self->glfw_window);
-    } break ;
-    case WINDOW_STATE_MAXIMIZED: {
-        glfwMaximizeWindow(self->glfw_window);
-    } break ;
-    case WINDOW_STATE_WINDOWED: {
-        window_state_t current_state = window__get_state(self);
-        if (
-            current_state == WINDOW_STATE_MINIMIZED ||
-            current_state == WINDOW_STATE_MAXIMIZED
-        ) {
-            glfwRestoreWindow(self->glfw_window);
+window_display_state_t window__get_display_state(window_t self) {
+    if (window__get_fullscreen(self)) {
+        if (window__get_minimized(self)) {
+            return WINDOW_DISPLAY_STATE_MINIMIZED_FULLSCREEN;
+        } else {
+            return WINDOW_DISPLAY_STATE_FULLSCREEN;
         }
-
-        glfwSetWindowMonitor(
-            self->glfw_window,
-            NULL,
-            self->content_area_x, self->content_area_y,
-            self->content_area_w, self->content_area_h,
-            GLFW_DONT_CARE
-        );
-    } break ;
-    case WINDOW_STATE_FULL_SCREEN: {
-        window_state_t current_state = window__get_state(self);
-        if (
-            current_state == WINDOW_STATE_MINIMIZED ||
-            current_state == WINDOW_STATE_MAXIMIZED
-        ) {
-            glfwRestoreWindow(self->glfw_window);
+    } else {
+        if (window__get_minimized(self)) {
+            return WINDOW_DISPLAY_STATE_WINDOWED_MINIMIZED;
+        } else if (window__get_maximized(self)) {
+            return WINDOW_DISPLAY_STATE_WINDOWED_MAXIMIZED;
+        } else {
+            return WINDOW_DISPLAY_STATE_WINDOWED;
         }
-
-        const GLFWvidmode* mode = glfwGetVideoMode(self->monitor);
-        glfwSetWindowMonitor(
-            self->glfw_window,
-            self->monitor,
-            0, 0,
-            mode->width, mode->height,
-            mode->refreshRate
-        );
-    } break ;
-    default: ASSERT(false);
     }
-
-    if (!was_hidden) {
-        window__set_hidden(self, false);
-    }
-}
-
-window_state_t window__get_state(window_t self) {
-    if (glfwGetWindowAttrib(self->glfw_window, GLFW_ICONIFIED)) {
-        return WINDOW_STATE_MINIMIZED;
-    }
-    if (glfwGetWindowAttrib(self->glfw_window, GLFW_MAXIMIZED)) {
-        return WINDOW_STATE_MAXIMIZED;
-    }
-    if (glfwGetWindowMonitor(self->glfw_window)) {
-        return WINDOW_STATE_FULL_SCREEN;
-    }
-
-    return WINDOW_STATE_WINDOWED;
-
-    // what about hidden state?
 }
 
 void window__set_hidden(window_t self, bool value) {

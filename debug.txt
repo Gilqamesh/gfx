@@ -1,28 +1,631 @@
-[19:37:12] [glfw] - info: 
+[13:48:18] [glfw] - info: 
   version string: 3.4.0 Wayland X11 GLX Null EGL OSMesa monotonic
   compiled version: 3.4.0
   runtime version: 3.4.0
   number of connected monitors: 1
     0: eDP-1 - physical size: 380x210 [mm]
-[19:37:12] [glfw] - info: controller [Title] is connected
-[19:37:12] [glfw] - info: controller [Debug window] is connected
-[19:37:12] [gl] - error: 
-  source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
-  type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
-  severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
-  message:  Shader Stats: SGPRS: 24 VGPRS: 8 Code Size: 148 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 0 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (CS, W64)
-[19:37:12] [gl] - error: 
-  source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
-  type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
-  severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
-  message:  Shader Stats: SGPRS: 8 VGPRS: 8 Code Size: 52 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 1 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (PS, W32)
-[19:37:12] [gl] - error: 
-  source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
-  type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
-  severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
-  message:  Shader Stats: SGPRS: 16 VGPRS: 16 Code Size: 132 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 0 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (VS, W32)
-[19:37:12] [gl] - error: 
-  source:   DEBUG_SOURCE_SHADER_COMPILER A compiler for a shading language                 
-  type:     DEBUG_TYPE_OTHER             Some type that isn't one of these                 
-  severity: DEBUG_SEVERITY_NOTIFICATION  Anything that isn't an error or performance issue.
-  message:  Shader Stats: SGPRS: 8 VGPRS: 8 Code Size: 20 LDS: 0 Scratch: 0 Max Waves: 16 Spilled SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 Outputs: 1 PatchOutputs: 0 DivergentLoop: 0 InlineUniforms: 0 (PS, W64)
+[13:48:18] [glfw] - info: controller [Title] is connected
+[13:48:19] [glfw] - info: controller [Debug window] is connected
+[13:48:19] [app] - info: target fps: 60.000000
+[13:48:19] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:19] [glfw] - info: window Title: content area's position changed to: 250 319
+[13:48:19] [glfw] - info: window Title: has gained input focus
+[13:48:19] [glfw] - info: window Title: has lost input focus
+[13:48:19] [glfw] - info: window Title: content area's position changed to: 250 282
+[13:48:19] [glfw] - info: window Title: content area's position changed to: 250 319
+[13:48:19] [glfw] - info: window Title: has gained input focus
+[13:48:19] [glfw] - info: window Title: has lost input focus
+[13:48:19] [glfw] - info: window Title: has gained input focus
+[13:48:19] [glfw] - info: window Title: has lost input focus
+[13:48:19] [glfw] - info: window Title: has gained input focus
+[13:48:19] [glfw] - info: window Title: content area's position changed to: 100 100
+[13:48:19] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:19] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:38] [app] - info: adjusted expected updates: 100.000000 -> 66.666667 [updates / s]
+[13:48:38] [glfw] - info: window Title: has lost input focus
+[13:48:38] [glfw] - info: window Title: has gained input focus
+[13:48:38] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_MAXIMIZE]: released -> pressed
+  button repeats 1
+[13:48:38] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_MAXIMIZE]: pressed -> released
+[13:48:38] [glfw] - info: window Title: has lost input focus
+[13:48:38] [glfw] - info: window Title: has gained input focus
+[13:48:38] [glfw] - info: window Title: has lost input focus
+[13:48:38] [glfw] - info: window Title: is maximized
+[13:48:38] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1371px
+[13:48:38] [glfw] - info: window Title: content area's size changed to: 2560 1371
+[13:48:38] [glfw] - info: window Title: content area's position changed to: 0 69
+[13:48:38] [glfw] - info: window Title: cursor has entered the content area
+[13:48:39] [glfw] - info: window Title: cursor has left the content area
+[13:48:39] [glfw] - info: window Title: has gained input focus
+[13:48:39] [glfw] - info: window Title: cursor has entered the content area
+[13:48:41] [glfw] - info: 
+  window Title: processing button
+  button transition [CURSOR_LEFT]: released -> pressed
+  button repeats 1
+[13:48:41] [glfw] - info: 
+  window Title: processing button
+  button transition [CURSOR_LEFT]: pressed -> released
+[13:48:41] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:41] [glfw] - info: window Title: content area's position changed to: 100 100
+[13:48:41] [glfw] - info: window Title: cursor has left the content area
+[13:48:41] [glfw] - info: window Title: is restored
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:41] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:41] [glfw] - info: window Title: cursor has entered the content area
+[13:48:41] [glfw] - info: window Title: cursor has left the content area
+[13:48:41] [glfw] - info: window Title: cursor has entered the content area
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:41] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:41] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:41] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:41] [glfw] - info: window Title: is maximized
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 537px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 500 537
+[13:48:41] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:41] [glfw] - info: window Title: cursor has left the content area
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:41] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:41] [glfw] - info: window Title: cursor has entered the content area
+[13:48:41] [glfw] - info: window Title: cursor has left the content area
+[13:48:41] [glfw] - info: window Title: cursor has entered the content area
+[13:48:41] [glfw] - info: window Title: cursor has left the content area
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:41] [glfw] - info: window Title: content area's position changed to: 86 51
+[13:48:41] [glfw] - info: window Title: is restored
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:41] [glfw] - info: window Title: content area's position changed to: 86 88
+[13:48:41] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:41] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:41] [glfw] - info: window Title: content area's position changed to: 100 100
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:42] [glfw] - info: window Title: cursor has entered the content area
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:42] [glfw] - info: window Title: is maximized
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 537px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 537
+[13:48:42] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:42] [glfw] - info: window Title: cursor has left the content area
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:42] [glfw] - info: window Title: cursor has entered the content area
+[13:48:42] [glfw] - info: window Title: cursor has left the content area
+[13:48:42] [glfw] - info: window Title: cursor has entered the content area
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 100 100
+[13:48:42] [glfw] - info: window Title: cursor has left the content area
+[13:48:42] [glfw] - info: window Title: is restored
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 100 137
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:42] [glfw] - info: window Title: cursor has entered the content area
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:42] [glfw] - info: window Title: is maximized
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:42] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:42] [glfw] - info: window Title: cursor has left the content area
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:42] [glfw] - info: window Title: cursor has entered the content area
+[13:48:42] [glfw] - info: window Title: cursor has left the content area
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 86 125
+[13:48:42] [glfw] - info: window Title: is restored
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 100 137
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 86 125
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 100 137
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:42] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:42] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:42] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:42] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:42] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: window Title: is maximized
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 500px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 500
+[13:48:43] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 100 137
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: is restored
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 100 174
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: window Title: is maximized
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:43] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 86 162
+[13:48:43] [glfw] - info: window Title: is restored
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 100 174
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 86 162
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 100 174
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: window Title: is maximized
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 463px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 463
+[13:48:43] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 100 174
+[13:48:43] [glfw] - info: window Title: cursor has left the content area
+[13:48:43] [glfw] - info: window Title: is restored
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 100 211
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:43] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:43] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:43] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:43] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:43] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: is maximized
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:44] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 86 199
+[13:48:44] [glfw] - info: window Title: is restored
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 211
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 86 199
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 211
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: is maximized
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:44] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 86 162
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1371px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1371
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 86 199
+[13:48:44] [glfw] - info: window Title: is restored
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 211
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 86 199
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 211
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: is maximized
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 426px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 426
+[13:48:44] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 211
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: is restored
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 248
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: is maximized
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 315px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 315
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 86 236
+[13:48:44] [glfw] - info: window Title: is restored
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 248
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 86 236
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 248
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: is maximized
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 389px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 389
+[13:48:44] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 248
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: is restored
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 315px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 315
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 285
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 37
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: is maximized
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 352px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 352
+[13:48:44] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 315px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 315
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 285
+[13:48:44] [glfw] - info: window Title: is restored
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 315px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 315
+[13:48:44] [glfw] - info: window Title: cursor has left the content area
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 278px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 500 278
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 100 322
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: released -> pressed
+  button repeats 1
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1403px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1403
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 14 49
+[13:48:44] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: pressed -> released
+[13:48:44] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1440px
+[13:48:44] [glfw] - info: window Title: content area's size changed to: 2560 1440
+[13:48:44] [glfw] - info: window Title: content area's position changed to: 0 0
+[13:48:44] [glfw] - info: window Title: cursor has entered the content area
+[13:48:45] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_FULL_SCREEN]: pressed -> released
+[13:48:45] [glfw] - info: 
+  window Title: processing button
+  button transition [WINDOW_WINDOWED]: released -> pressed
+  button repeats 1
+[13:48:45] [glfw] - info: window Title: is maximized
+[13:48:45] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 315px
+[13:48:45] [glfw] - info: window Title: content area's size changed to: 500 315
+[13:48:45] [glfw] - info: window Title: content area's position changed to: -14 20
+[13:48:45] [glfw] - info: window Title: cursor has left the content area
+[13:48:45] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 278px
+[13:48:45] [glfw] - info: window Title: content area's size changed to: 500 278
+[13:48:45] [glfw] - info: window Title: framebuffer dimensions changed to: 2560px 1408px
+[13:48:45] [glfw] - info: window Title: content area's size changed to: 2560 1408
+[13:48:45] [glfw] - info: window Title: content area's position changed to: 0 32
+[13:48:45] [glfw] - info: window Title: cursor has entered the content area
+[13:48:45] [glfw] - info: window Title: cursor has left the content area
+[13:48:45] [glfw] - info: window Title: cursor has entered the content area
+[13:48:45] [glfw] - info: window Title: content area's position changed to: 100 285
+[13:48:45] [glfw] - info: window Title: cursor has left the content area
+[13:48:45] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 278px
+[13:48:45] [glfw] - info: window Title: content area's size changed to: 500 278
+[13:48:45] [glfw] - info: window Title: is restored
+[13:48:45] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 241px
+[13:48:45] [glfw] - info: window Title: content area's size changed to: 500 241
+[13:48:45] [glfw] - info: window Title: content area's position changed to: 100 322
+[13:48:45] [glfw] - info: window Title: framebuffer dimensions changed to: 500px 278px
+[13:48:45] [glfw] - info: window Title: content area's size changed to: 500 278
+[13:48:45] [glfw] - info:
