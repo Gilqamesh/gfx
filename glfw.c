@@ -2,7 +2,7 @@
 
 #include "debug.h"
 #include "helper_macros.h"
-#include "gl.h"
+#include "gfx.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -182,6 +182,12 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+
+#if defined(VULKAN)
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+#endif
+
     result->glfw_window = glfwCreateWindow(width, height, title, NULL, NULL);
     if (!result->glfw_window) {
         window__destroy(result);
@@ -189,7 +195,8 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
     }
 
     window__set_current_window(result);
-    if (!gl__init((GLADloadproc) glfwGetProcAddress)) {
+
+    if (!gfx__init((gfx_symbol_loader_t) glfwGetProcAddress)) {
         return 0;
     }
 
@@ -296,7 +303,7 @@ void window__set_windowed_state_content_area(window_t self, int32_t x, int32_t y
         if (!was_hidden) {
             window__set_hidden(self, true);
         }
-        
+
         glfwSetWindowPos(self->glfw_window, x, y);
         glfwSetWindowSize(self->glfw_window, (int32_t) width, (int32_t) height);
         glfwGetWindowPos(self->glfw_window, &self->content_area_x, &self->content_area_y);

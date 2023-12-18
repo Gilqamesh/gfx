@@ -84,6 +84,10 @@ void debug__clear() {
     debug.number_of_lines = 0;
 }
 
+void* debug__top() {
+    return debug.buffer.cur;
+}
+
 void debug__set_message_type_availability(debug_message_type_t message_type, bool value) {
     ASSERT(message_type < _DEBUG_MESSAGE_TYPE_SIZE);
     debug.error_level_availability[message_type] = value;

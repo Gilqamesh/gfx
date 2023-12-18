@@ -1,7 +1,9 @@
 static const gl_buffer_t* default_frame_buffer = 0;
 
+static void gl_buffer__bind(gl_buffer_t* self);
+static void gl_buffer__unbind(gl_buffer_t* self);
 static uint32_t gl_buffer_type__to_gl(gl_buffer_type_t type);
-static uint32_t gl_buffer_usage_type__to_gl(gl_buffer_usage_type_t usage_type, gl_bufer_freq_type_t freq_type);
+static uint32_t gl_buffer_access_type__to_gl(gl_buffer_access_type_t access_type);
 static void APIENTRY gl__error_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* user_param);
 static const char* gl_error_message_source__to_type_str(GLenum source);
 static const char* gl_error_message_source__to_str(GLenum source);
@@ -10,6 +12,42 @@ static const char* gl_error_message_type__to_str(GLenum type);
 static const char* gl_error_message_severity__to_type_str(GLenum severity);
 static const char* gl_error_message_severity__to_str(GLenum severity);
 static GLenum gl_object_label__from_buffer_type(gl_buffer_type_t buffer_type);
+static uint32_t shader_type__to_gl(shader_type_t shader_type);
+static const char* shader_type__to_str(shader_type_t shader_type);
+static void geometry_object__bind(geometry_object_t* self);
+static void geometry_object__unbind(geometry_object_t* self);
+static uint32_t gl_type__to_gl(gl_type_t type);
+static uint32_t gl_type__to_size(gl_type_t type);
+static uint32_t gl_channel_count__to_gl(gl_channel_count_t channel_count);
+static uint32_t gl_channel_count__to_size(gl_channel_count_t channel_count);
+static uint32_t gl_type_and_channel__to_internal_format(gl_type_t type, gl_channel_count_t channel_count);
+static GLenum primitive_type__to_gl(primitive_type_t type);
+
+static void gl_buffer__bind(gl_buffer_t* self) {
+    if (self->is_bound) {
+        return ;
+    }
+
+    self->is_bound = true;
+    if (self->target == GL_FRAMEBUFFER) {
+        glBindFramebuffer(GL_FRAMEBUFFER, self->id);
+    } else {
+        glBindBuffer(self->target, self->id);
+    }
+}
+
+static void gl_buffer__unbind(gl_buffer_t* self) {
+    if (!self->is_bound) {
+        return ;
+    }
+
+    self->is_bound = false;
+    if (self->target == GL_FRAMEBUFFER) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    } else {
+        glBindBuffer(self->target, 0);
+    }
+}
 
 static uint32_t gl_buffer_type__to_gl(gl_buffer_type_t type) {
     switch (type) {
@@ -24,32 +62,11 @@ static uint32_t gl_buffer_type__to_gl(gl_buffer_type_t type) {
     return 0;
 }
 
-static uint32_t gl_buffer_usage_type__to_gl(gl_buffer_usage_type_t usage_type, gl_bufer_freq_type_t freq_type) {
-    switch (usage_type) {
-    case GL_BUFFER_USAGE_TYPE_WRITE: {
-        switch (freq_type) {
-        case GL_BUFFER_FREQ_TYPE_STATIC:  return GL_STATIC_DRAW;
-        case GL_BUFFER_FREQ_TYPE_DYNAMIC: return GL_DYNAMIC_DRAW;
-        case GL_BUFFER_FREQ_TYPE_STREAM:  return GL_STREAM_DRAW;
-        default: ASSERT(false);
-        }
-    } break ;
-    case GL_BUFFER_USAGE_TYPE_READ: {
-        switch (freq_type) {
-        case GL_BUFFER_FREQ_TYPE_STATIC:  return GL_STATIC_READ;
-        case GL_BUFFER_FREQ_TYPE_DYNAMIC: return GL_DYNAMIC_READ;
-        case GL_BUFFER_FREQ_TYPE_STREAM:  return GL_STREAM_READ;
-        default: ASSERT(false);
-        }
-    } break ;
-    case GL_BUFFER_USAGE_TYPE_COPY: {
-        switch (freq_type) {
-        case GL_BUFFER_FREQ_TYPE_STATIC:  return GL_STATIC_COPY;
-        case GL_BUFFER_FREQ_TYPE_DYNAMIC: return GL_DYNAMIC_COPY;
-        case GL_BUFFER_FREQ_TYPE_STREAM:  return GL_STREAM_COPY;
-        default: ASSERT(false);
-        }
-    } break ;
+static uint32_t gl_buffer_access_type__to_gl(gl_buffer_access_type_t access_type) {
+    switch (access_type) {
+    case GL_BUFFER_ACCESS_TYPE_READ:       return GL_MAP_READ_BIT;
+    case GL_BUFFER_ACCESS_TYPE_WRITE:      return GL_MAP_WRITE_BIT;
+    case GL_BUFFER_ACCESS_TYPE_WRITE_READ: return GL_MAP_READ_BIT | GL_MAP_WRITE_BIT;
     default: ASSERT(false);
     }
 
@@ -180,6 +197,171 @@ static GLenum gl_object_label__from_buffer_type(gl_buffer_type_t buffer_type) {
     case GL_BUFFER_TYPE_TEXTURE:            return GL_TEXTURE;
     case GL_BUFFER_TYPE_TRANSFORM_FEEDBACK: return GL_TRANSFORM_FEEDBACK;
     case GL_BUFFER_TYPE_FRAMEBUFFER:        return GL_FRAMEBUFFER;
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static uint32_t shader_type__to_gl(shader_type_t shader_type) {
+    switch (shader_type) {
+    case SHADER_TYPE_VERTEX:       return GL_VERTEX_SHADER;
+    case SHADER_TYPE_FRAGMENT:     return GL_FRAGMENT_SHADER;
+    case SHADER_TYPE_TESS_CONTROL: return GL_TESS_CONTROL_SHADER;
+    case SHADER_TYPE_TESS_EVAL:    return GL_TESS_EVALUATION_SHADER;
+    case SHADER_TYPE_GEOMETRY:     return GL_GEOMETRY_SHADER;
+    case SHADER_TYPE_COMPUTE:      return GL_COMPUTE_SHADER;
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static const char* shader_type__to_str(shader_type_t shader_type) {
+    switch (shader_type) {
+    case SHADER_TYPE_VERTEX:       return "VERTEX";
+    case SHADER_TYPE_FRAGMENT:     return "FRAGMENT";
+    case SHADER_TYPE_TESS_CONTROL: return "TESS_CONTROL";
+    case SHADER_TYPE_TESS_EVAL:    return "TESS_EVAL";
+    case SHADER_TYPE_GEOMETRY:     return "GEOMETRY";
+    case SHADER_TYPE_COMPUTE:      return "COMPUTE";
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static void geometry_object__bind(geometry_object_t* self) {
+    glBindVertexArray(self->id);
+}
+
+static void geometry_object__unbind(geometry_object_t* self) {
+    (void) self;
+
+    glBindVertexArray(0);
+}
+
+static uint32_t gl_type__to_gl(gl_type_t type) {
+    switch (type) {
+    case GL_TYPE_R32:  return GL_FLOAT;
+    case GL_TYPE_S8:   return GL_BYTE;
+    case GL_TYPE_S16:  return GL_SHORT;
+    case GL_TYPE_S32:  return GL_INT;
+    case GL_TYPE_U8:   return GL_UNSIGNED_BYTE;
+    case GL_TYPE_U16:  return GL_UNSIGNED_SHORT;
+    case GL_TYPE_U32:  return GL_UNSIGNED_INT;
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static uint32_t gl_type__to_size(gl_type_t type) {
+    switch (type) {
+    case GL_TYPE_R32:   return 4;
+    case GL_TYPE_S8:    return sizeof(int8_t);
+    case GL_TYPE_S16:   return sizeof(int16_t);
+    case GL_TYPE_S32:   return sizeof(int32_t);
+    case GL_TYPE_U8:    return sizeof(uint8_t);
+    case GL_TYPE_U16:   return sizeof(uint16_t);
+    case GL_TYPE_U32:   return sizeof(uint32_t);
+    default: ASSERT(false); 
+    }
+}
+
+static uint32_t gl_channel_count__to_gl(gl_channel_count_t channel_count) {
+    switch (channel_count) {
+    case GL_CHANNEL_COUNT_1: return GL_RED;
+    case GL_CHANNEL_COUNT_2: return GL_RG;
+    case GL_CHANNEL_COUNT_3: return GL_RGB;
+    case GL_CHANNEL_COUNT_4: return GL_RGBA;
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static uint32_t gl_channel_count__to_size(gl_channel_count_t channel_count) {
+    switch (channel_count) {
+    case GL_CHANNEL_COUNT_1: return 1;
+    case GL_CHANNEL_COUNT_2: return 2;
+    case GL_CHANNEL_COUNT_3: return 3;
+    case GL_CHANNEL_COUNT_4: return 4;
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static uint32_t gl_type_and_channel__to_internal_format(gl_type_t type, gl_channel_count_t channel_count) {
+    /**
+     * @todo None of these are normalized, there are normalized versions like GL_R8 instead of GL_R8UI in case its necessary in the future
+    */
+    switch (channel_count) {
+    case GL_CHANNEL_COUNT_1: {
+        switch (type) {
+        case GL_TYPE_U8:    return GL_R8UI;
+        case GL_TYPE_U16:   return GL_R16UI;
+        case GL_TYPE_U32:   return GL_R32UI;
+        case GL_TYPE_S8:    return GL_R8I;
+        case GL_TYPE_S16:   return GL_R16I;
+        case GL_TYPE_S32:   return GL_R32I;
+        case GL_TYPE_R32:   return GL_R32F;
+        default: ASSERT(false);
+        }
+    } break ;
+    case GL_CHANNEL_COUNT_2: {
+        switch (type) {
+        case GL_TYPE_U8:    return GL_RG8UI;
+        case GL_TYPE_U16:   return GL_RG16UI;
+        case GL_TYPE_U32:   return GL_RG32UI;
+        case GL_TYPE_S8:    return GL_RG8I;
+        case GL_TYPE_S16:   return GL_RG16I;
+        case GL_TYPE_S32:   return GL_RG32I;
+        case GL_TYPE_R32:   return GL_RG32F;
+        default: ASSERT(false);
+        }
+    } break ;
+    case GL_CHANNEL_COUNT_3: {
+        switch (type) {
+        case GL_TYPE_U8:    ASSERT(false); return 0; /* Note: while it is supported for some calls, it is not supported for glClearBufferSubData */
+        case GL_TYPE_U16:   ASSERT(false); return 0; /* Note: while it is supported for some calls, it is not supported for glClearBufferSubData */
+        case GL_TYPE_U32:   return GL_RGB32UI;
+        case GL_TYPE_S8:    ASSERT(false); return 0; /* Note: while it is supported for some calls, it is not supported for glClearBufferSubData */
+        case GL_TYPE_S16:   ASSERT(false); return 0; /* Note: while it is supported for some calls, it is not supported for glClearBufferSubData */
+        case GL_TYPE_S32:   return GL_RGB32I;
+        case GL_TYPE_R32:   return GL_RGB32F;
+        default: ASSERT(false);
+        }
+    } break ;
+    case GL_CHANNEL_COUNT_4: {
+        switch (type) {
+        case GL_TYPE_U8:    return GL_RGBA8UI;
+        case GL_TYPE_U16:   return GL_RGBA16UI;
+        case GL_TYPE_U32:   return GL_RGBA32UI;
+        case GL_TYPE_S8:    return GL_RGBA8I;
+        case GL_TYPE_S16:   return GL_RGBA16I;
+        case GL_TYPE_S32:   return GL_RGBA32I;
+        case GL_TYPE_R32:   return GL_RGBA32F;
+        default: ASSERT(false);
+        }
+    } break ;
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static GLenum primitive_type__to_gl(primitive_type_t type) {
+    switch (type) {
+    case PRIMITIVE_TYPE_POINT:          return GL_POINTS;
+    case PRIMITIVE_TYPE_LINE:           return GL_LINES;
+    case PRIMITIVE_TYPE_LINE_STRIP:     return GL_LINE_STRIP;
+    case PRIMITIVE_TYPE_LINE_LOOP:      return GL_LINE_LOOP;
+    case PRIMITIVE_TYPE_TRIANGLE:       return GL_TRIANGLES;
+    case PRIMITIVE_TYPE_TRIANGLE_STRIP: return GL_TRIANGLE_STRIP;
+    case PRIMITIVE_TYPE_TRIANGLE_FAN:   return GL_TRIANGLE_FAN;
+    case PRIMITIVE_TYPE_PATCHES:        return GL_PATCHES;
     default: ASSERT(false);
     }
 

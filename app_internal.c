@@ -1,9 +1,3 @@
-typedef struct image {
-    uint8_t* data;
-    uint32_t w;
-    uint32_t h;
-} image_t;
-
 typedef struct frame_sample {
     double   elapsed_time;
     double   delay;
@@ -22,10 +16,7 @@ typedef struct frame_info {
 } frame_info_t;
 
 struct app {
-    image_t   window_icon_image;
-
-    cursor_t  cursor;
-    image_t   cursor_image;
+    game_t game;
 
     uint32_t  current_frame;
     window_t  window;
@@ -46,22 +37,15 @@ static void app__pre_update(app_t self);
 static void app__update_loop(app_t self);
 static void app__update(app_t self);
 static void app__render(app_t self);
-static void array__ensure_top(void** array, uint32_t array_top, uint32_t* array_size, uint32_t element_size);
 static void app__button_default_action_fps_lock_inc(void* user_pointer);
 static void app__button_default_action_fps_lock_dec(void* user_pointer);
-static bool app__load_images(app_t self);
 static void app__collect_previous_frame_info(app_t self);
 
 static void app__pre_update(app_t self) {
     (void) self;
 
-    attached_buffer_color__clearfv(
-        (void*)0,
-        sin(system__get_time()) * 0.5f + 0.5f,
-        cos(system__get_time()) * 0.5f + 0.5f,
-        cos(system__get_time() + 0.25f) * 0.5f + 0.5f,
-        1.0f
-    );
+    // attached_buffer_color__clearfv((void*)0, 0.5f, 0.3f, 0.5f, 1.0f);
+    // attached_buffer_color__clearfv((void*)0, 1.0f, 1.0f, 1.0f, 1.0f);
     // gl__clear_color(0.9f, 0.0f, 0.0f, 1.0f, BUFFER_COLOR);
 }
 
@@ -77,7 +61,7 @@ static void app__update_loop(app_t self) {
     }
     ASSERT(self->time_update_actual < self->time_update_expected);
 
-    array__ensure_top((void**) &self->prev_frame_info.frame_sample, self->prev_frame_info.frame_sample_top, &self->prev_frame_info.frame_sample_size, sizeof(self->prev_frame_info.frame_sample[0]));
+    ARRAY_ENSURE_TOP(self->prev_frame_info.frame_sample, self->prev_frame_info.frame_sample_top, self->prev_frame_info.frame_sample_size);
     self->prev_frame_info.frame_sample[self->prev_frame_info.frame_sample_top].number_of_updates = 0;
     while (self->time_update_to_process >= self->time_update_expected) {
         app__update(self);
@@ -91,8 +75,9 @@ static void app__update(app_t self) {
 
     ++self->prev_frame_info.frame_sample[self->prev_frame_info.frame_sample_top].number_of_updates;
 
-    // simulate update
-    system__usleep(2230.0);
+    game__update(self->game, self->time_update_expected);
+    // // simulate update
+    // system__usleep(2230.0);
 
     double time_end = system__get_time();
 
@@ -166,19 +151,6 @@ static void app__render(app_t self) {
     self->time_render_actual = time_render_end - time_render_start;
 }
 
-static void array__ensure_top(void** array, uint32_t array_top, uint32_t* array_size, uint32_t element_size) {
-    if (array_top == *array_size) {
-        if (*array_size == 0) {
-            *array_size = 8;
-            *array = malloc(*array_size * element_size);
-        } else {
-            *array_size <<= 1;
-            *array = realloc(*array, *array_size * element_size);
-        }
-    }
-    ASSERT(array_top < *array_size);
-}
-
 static void app__button_default_action_fps_lock_inc(void* user_pointer) {
     app_t app = (app_t) user_pointer;
 
@@ -203,20 +175,6 @@ static void app__button_default_action_fps_lock_dec(void* user_pointer) {
     debug__write_and_flush(DEBUG_MODULE_APP, DEBUG_INFO, "changed: fps - %lf -> %lf", current_fps, new_fps);
 }
 
-static bool app__load_images(app_t self) {
-    int number_of_channels_per_pixel;
-    self->window_icon_image.data = stbi_load("assets/icon.png", (int32_t*) &self->window_icon_image.w, (int32_t*) &self->window_icon_image.h, &number_of_channels_per_pixel, 0);
-    if (!self->window_icon_image.data) {
-        return false;
-    }
-    self->cursor_image.data = stbi_load("assets/cursor.png", (int32_t*) &self->cursor_image.w, (int32_t*) &self->cursor_image.h, &number_of_channels_per_pixel, 0);
-    if (!self->cursor_image.data) {
-        return false;
-    }
-
-    return true;
-}
-
 static void app__collect_previous_frame_info(app_t self) {
     self->prev_frame_info.time_start = self->prev_frame_info.time_end;
     self->prev_frame_info.time_end   = system__get_time();
@@ -227,7 +185,7 @@ static void app__collect_previous_frame_info(app_t self) {
     const double actual_total_time_passed   = self->prev_frame_info.time_end - self->time_start;
     const double total_delay                = actual_total_time_passed - expected_total_time_passed;
 
-    array__ensure_top((void**) &self->prev_frame_info.frame_sample, self->prev_frame_info.frame_sample_top, &self->prev_frame_info.frame_sample_size, sizeof(self->prev_frame_info.frame_sample[0]));
+    ARRAY_ENSURE_TOP(self->prev_frame_info.frame_sample, self->prev_frame_info.frame_sample_top, self->prev_frame_info.frame_sample_size);
     self->prev_frame_info.frame_sample[self->prev_frame_info.frame_sample_top].delay        = (self->prev_frame_info.time_end - self->prev_frame_info.time_start) - self->time_frame_expected;
     self->prev_frame_info.frame_sample[self->prev_frame_info.frame_sample_top].elapsed_time = self->prev_frame_info.time_end - self->prev_frame_info.time_start;
     self->prev_frame_info.frame_sample[self->prev_frame_info.frame_sample_top].time_render_actual = self->time_render_actual;

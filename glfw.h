@@ -13,8 +13,10 @@
 
 bool glfw__init();
 void glfw__deinit();
+
 // @brief polls all pending events and inputs, which in turn calls all callbacks associated with every window
 void glfw__poll_events();
+
 // @brief blocks thread and waits for at least one incoming event
 void glfw__wait_events();
 
@@ -31,6 +33,7 @@ typedef GLFWmonitor* monitor_t;
 monitor_t* monitor__get_monitors(uint32_t* number_of_monitors);
 
 void monitor__get_screen_size(monitor_t self, uint32_t* w, uint32_t* h);
+
 // @brief get monitor's workable area that is not occupied by global menu/task bars
 void monitor__get_work_area(monitor_t self, int32_t* x, int32_t* y, uint32_t* w, uint32_t* h);
 
@@ -173,10 +176,10 @@ enum button {
     BUTTON_FPS_LOCK_DEC /* default: alt + - */,
 
     BUTTON_WINDOW_CLOSE /* default: esc, alt+f4 */,
-    BUTTON_WINDOW_MINIMIZE /* default: alt + esc      */,
-    BUTTON_WINDOW_MAXIMIZE /* default: alt + key-up   */,
-    BUTTON_WINDOW_WINDOWED /* default: alt + key-down */,
-    BUTTON_WINDOW_FULL_SCREEN /* default: alt + enter */,
+    BUTTON_WINDOW_MINIMIZE /* default: alt + backspace */,
+    BUTTON_WINDOW_MAXIMIZE /* default: alt + key-up    */,
+    BUTTON_WINDOW_WINDOWED /* default: alt + key-down  */,
+    BUTTON_WINDOW_FULL_SCREEN /* default: alt + enter  */,
 
     BUTTON_DEBUG_INFO_MESSAGE_TOGGLE /* default: alt + i */,
 

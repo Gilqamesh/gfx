@@ -30,9 +30,11 @@ static const char* debug_message_type__to_str(debug_message_type_t message_type)
 
 static const char* debug_module__to_str(debug_module_t module) {
     switch (module) {
-    case DEBUG_MODULE_APP:  return "app";
-    case DEBUG_MODULE_GLFW: return "glfw";
-    case DEBUG_MODULE_GL:   return "gl";
+    case DEBUG_MODULE_APP:    return "app";
+    case DEBUG_MODULE_GLFW:   return "glfw";
+    case DEBUG_MODULE_GL:     return "gl";
+    case DEBUG_MODULE_VULKAN: return "vulkan";
+    case DEBUG_MODULE_GAME:   return "game";
     default: ASSERT(false);
     }
 

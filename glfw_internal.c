@@ -400,7 +400,7 @@ static void window__framebuffer_resize_callback(GLFWwindow* glfw_window, int wid
     debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: framebuffer dimensions changed to: %dpx %dpx", window->title, width, height);
     // note: width and height could be greater or smaller than the (content area converted to pixels)
     //  for example they could be smaller to display other elements outside of the opengl viewport
-    gl__viewport(0, 0, width, height);
+    gfx__viewport(0, 0, width, height);
 }
 
 static void window__content_scale_callback(GLFWwindow* glfw_window, float xscale, float yscale) {
@@ -495,13 +495,16 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
         }
     } break ;
     case GLFW_KEY_CAPS_LOCK: button = BUTTON_CAPS_LOCK; break ; case GLFW_KEY_LEFT_SHIFT: button = BUTTON_SHIFT; break ; case GLFW_KEY_RIGHT_SHIFT: button = BUTTON_SHIFT; break ;
-    case GLFW_KEY_SPACE: button = BUTTON_SPACE; break ; case GLFW_KEY_BACKSPACE: button = BUTTON_BACKSPACE; break ;
-    case GLFW_KEY_ESCAPE: {
+    case GLFW_KEY_SPACE: button = BUTTON_SPACE; break ;
+    case GLFW_KEY_BACKSPACE: {
         if (is_alt_down) {
             button = BUTTON_WINDOW_MINIMIZE;
         } else {
-            button = BUTTON_WINDOW_CLOSE;
+            button = BUTTON_BACKSPACE;
         }
+    } break ;
+    case GLFW_KEY_ESCAPE: {
+        button = BUTTON_WINDOW_CLOSE;
     } break ;
     case GLFW_KEY_F4: {
         if (is_alt_down) {

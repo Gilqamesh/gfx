@@ -4,12 +4,11 @@
 #include "helper_macros.h"
 #include "system.h"
 #include "glfw.h"
-#include "gl.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "third_party/stb/stb_image.h"
+#include "gfx.h"
+#include "game.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "app_internal.c"
 
@@ -21,10 +20,6 @@ app_t app__create(int argc, char* argv[]) {
     memset(result, 0, sizeof(*result));
 
     system__init();
-
-    if (!app__load_images(result)) {
-        return false;
-    }
 
     if (!glfw__init()) {
         return false;
@@ -44,40 +39,172 @@ app_t app__create(int argc, char* argv[]) {
         return false;
     }
 
-    result->debug_window = window__create(result->monitor, "Debug window", 100, 300);
+    // result->debug_window = window__create(result->monitor, "Debug window", 100, 300);
 
     window__button_register_action(result->window, BUTTON_FPS_LOCK_INC, (void*) result, app__button_default_action_fps_lock_inc);
     window__button_register_action(result->window, BUTTON_FPS_LOCK_DEC, (void*) result, app__button_default_action_fps_lock_dec);
 
-    window__set_icon(result->window, result->window_icon_image.data, result->window_icon_image.w, result->window_icon_image.h);
-
-    result->cursor = cursor__create(result->cursor_image.data, result->cursor_image.w, result->cursor_image.h);
-    window__set_cursor(result->window, result->cursor);
+    result->game = game__create(result->window);
+    if (!result->game) {
+        glfw__deinit();
+        return false;
+    }
 
     return result;
 }
 
 void app__destroy(app_t self) {
+    game__destroy(self->game);
     window__destroy(self->window);
     glfw__deinit();
-
-    if (self->window_icon_image.data) {
-        stbi_image_free(self->window_icon_image.data);
-    }
 }
 
 void app__run(app_t self) {
     // debug__set_message_module_availability(DEBUG_MODULE_APP, false);
-    debug__set_message_module_availability(DEBUG_MODULE_GL, false);
-    // debug__set_message_module_availability(DEBUG_MODULE_GLFW, false);
+    // debug__set_message_module_availability(DEBUG_MODULE_GL, false);
+    debug__set_message_module_availability(DEBUG_MODULE_GLFW, false);
 
-    window__set_current_window(self->debug_window);
-    window__destroy(self->debug_window);
+    // window__set_current_window(self->debug_window);
+    // window__destroy(self->debug_window);
 
+    int32_t  screen_x;
+    int32_t  screen_y;
+    uint32_t screen_width;
+    uint32_t screen_height;
+    monitor__get_work_area(self->monitor, &screen_x, &screen_y, &screen_width, &screen_height);
     window__set_current_window(self->window);
-    window__set_windowed_state_content_area(self->window, 100, 100, 500, 500);
+    const uint32_t window_width = screen_width * 9 / 10;
+    const uint32_t window_height = screen_height * 9 / 10;
+    const int32_t window_x = screen_x + (screen_width - window_width) / 2;
+    const int32_t window_y = screen_y + (screen_height - window_height) / 2;
+    window__set_windowed_state_content_area(self->window, window_x, window_y, window_width, window_height);
     window__set_display_state(self->window, WINDOW_DISPLAY_STATE_WINDOWED);
     window__set_window_opacity(self->window, 0.89);
+
+    ///////////////////////////////////////////////////////////////////////
+    // const float positions[] = {
+    //     -0.5f, -0.5f, 0.0f,
+    //     -0.5f, 0.5f, 0.0f,
+    //     0.5f, 0.5f, 0.0f,
+    //     0.5f, -0.5f, 0.0f
+    // };
+    // gl_buffer_t position_buffer;
+    // gl_buffer__create(
+    //     &position_buffer, "positions",
+    //     (void*) positions, sizeof(positions),
+    //     GL_BUFFER_TYPE_VERTEX,
+    //     GL_BUFFER_ACCESS_TYPE_WRITE
+    // );
+
+    // const uint32_t indices[] = {
+    //     0, 1, 2,
+    //     2, 0, 3
+    // };
+
+    // gl_buffer_t index_buffer;
+    //     gl_buffer__create(
+    //     &index_buffer, "indices",
+    //     (void*) indices, sizeof(indices),
+    //     GL_BUFFER_TYPE_INDEX,
+    //     GL_BUFFER_ACCESS_TYPE_WRITE
+    // );
+
+    // shader_object_t vertex_shader_object;
+    // shader_object__create(
+    //     &vertex_shader_object,
+    //     SHADER_TYPE_VERTEX,
+    //     "#version 460 core\n"
+    //     "layout (location = 0) in vec3 pos;\n"
+    //     "void main() {\n"
+    //     "  gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);\n"
+    //     "}\n"
+    // );
+    // shader_object_t tess_control_shader_object;
+    // shader_object__create(
+    //     &tess_control_shader_object,
+    //     SHADER_TYPE_TESS_CONTROL,
+    //     "#version 460 core\n"
+    //     "layout (vertices = 3) out;\n"
+    //     "void main() {\n"
+    //     "  if (gl_InvocationID == 0) {\n"
+    //     "    gl_TessLevelInner[0] = 30.0;\n"
+    //     "    gl_TessLevelOuter[0] = 5.0;\n"
+    //     "    gl_TessLevelOuter[1] = 5.0;\n"
+    //     "    gl_TessLevelOuter[2] = 5.0;\n"
+    //     "  }\n"
+    //     "  gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;\n"
+    //     "}\n"
+    // );
+    // shader_object_t tess_eval_shader_object;
+    // shader_object__create(
+    //     &tess_eval_shader_object,
+    //     SHADER_TYPE_TESS_EVAL,
+    //     "#version 460 core\n"
+    //     "layout (triangles, equal_spacing, cw) in;\n"
+    //     "void main() {\n"
+    //     "  gl_Position = (gl_TessCoord.x * gl_in[0].gl_Position + gl_TessCoord.y * gl_in[1].gl_Position + gl_TessCoord.z * gl_in[2].gl_Position);\n"
+    //     "}\n"
+    // );
+    // shader_object_t geometry_shader_object;
+    // shader_object__create(
+    //     &geometry_shader_object,
+    //     SHADER_TYPE_GEOMETRY,
+    //     "#version 460 core\n"
+    //     "layout (triangles) in;\n"
+    //     "layout (points, max_vertices = 3) out;\n"
+    //     "void main() {\n"
+    //     "  for (int i = 0; i < gl_in.length(); i++) {\n"
+    //     "    gl_Position = gl_in[i].gl_Position;\n"
+    //     "    EmitVertex();\n"
+    //     "  }\n"
+    //     "}\n"
+    // );
+    // shader_object_t fragment_shader_object;
+    // shader_object__create(
+    //     &fragment_shader_object,
+    //     SHADER_TYPE_FRAGMENT,
+    //     "#version 460 core\n"
+    //     "out vec4 color;\n"
+    //     "void main() {\n"
+    //     "  color = vec4("
+    //     "    sin(gl_FragCoord.x * 0.25) * 0.5 + 0.5,"
+    //     "    cos(gl_FragCoord.y * 0.25) * 0.5 + 0.5,"
+    //     "    sin(gl_FragCoord.x * 0.15) * cos(gl_FragCoord.y * 0.15),"
+    //     "    1.0"
+    //     "  );\n"
+    //     "}\n"
+    // );
+
+    // shader_program_t shader_program;
+    // shader_program__create(&shader_program);
+    // shader_program__attach(&shader_program, &vertex_shader_object);
+    // shader_program__attach(&shader_program, &tess_control_shader_object);
+    // shader_program__attach(&shader_program, &tess_eval_shader_object);
+    // // shader_program__attach(&shader_program, &geometry_shader_object);
+    // shader_program__attach(&shader_program, &fragment_shader_object);
+    // if (!shader_program__link(&shader_program)) {
+    //     return ;
+    // }
+
+    // geometry_object_t geometry_object;
+    // geometry_object__create(&geometry_object);
+    // geometry_object__attach_vertex(
+    //     &geometry_object,
+    //     &position_buffer,
+    //     vertex_specification(GL_TYPE_R32, GL_CHANNEL_COUNT_3, false),
+    //     0,
+    //     3 * sizeof(float)
+    // );
+    // // geometry_object__attach_index_buffer(
+    // //     &geometry_object,
+    // //     &index_buffer
+    // // );
+
+    // // gl__set_polygon_mode(POLYGON_RASTERIZATION_MODE_LINE);
+
+    // gl__set_point_size(5.0f);
+
+    ///////////////////////////////////////////////////////////////////////
 
     const double target_fps = 60.0;
     self->time_frame_expected = 1.0 / target_fps;
@@ -88,6 +215,7 @@ void app__run(app_t self) {
     self->time_start               = system__get_time();
     self->prev_frame_info.time_end = self->time_start;
     self->time_update_to_process   = 0.0;
+
     while (!window__get_should_close(self->window)) {
         // app__collect_previous_frame_info(self);
         (void) app__collect_previous_frame_info;
@@ -100,8 +228,18 @@ void app__run(app_t self) {
 
         app__pre_update(self);
 
+        // float* p = gl_buffer__map(&position_buffer, sizeof(float), 0);
+        // p[0] = (float) sin(system__get_time());
+        // gl_buffer__unmap(&position_buffer);
+
         app__update_loop(self);
 
+        // geometry_object__draw(
+        //     &geometry_object,
+        //     &shader_program,
+        //     vertex_stream_specification(4, PRIMITIVE_TYPE_PATCHES, 0)
+        //     // vertex_stream_specification(6, PRIMITIVE_TYPE_PATCHES, 0)
+        // );
         app__render(self);
 
         const double time_mark_end_frame     = self->time_start + (self->current_frame + 1) * self->time_frame_expected;

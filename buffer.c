@@ -34,7 +34,7 @@ void buffer__write(buffer_t* self, const char* format, ...) {
 }
 
 void buffer__vwrite(buffer_t* self, const char* format, va_list ap) {
-    const uint32_t bytes_left = self->end - self->cur;
+    const uint32_t bytes_left    = self->end - self->cur;
     const uint32_t bytes_written = vsnprintf((char*) self->cur, bytes_left, format, ap);
     if (bytes_written >= bytes_left) {
         fprintf(

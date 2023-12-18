@@ -155,7 +155,8 @@
         "glfw3.h": "c",
         "glfw.h": "c",
         "system_defs.h": "c",
-        "glad.h": "c"
+        "glad.h": "c",
+        "gfx_math.h": "c"
     },
     "C_Cpp.default.compilerPath": "/usr/bin/gcc",
     "C_Cpp.errorSquiggles": "disabled"
