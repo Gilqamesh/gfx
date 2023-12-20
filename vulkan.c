@@ -4,83 +4,172 @@
 #include "helper_macros.h"
 
 #include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "vulkan_internal.c"
 
-static const char* vk_validation_layers[] = { "VK_LAYER_KHRONOS_validation" };
-
-bool vk__init() {
+bool vk__init(window_t window) {
     memset(&vk, 0, sizeof(vk));
 
-    vk__get_required_extensions();
+    vk.window = window;
 
-    /**
-     * Optional, but provides useful info to the driver in order to optimize our specific application
-    */
-    VkApplicationInfo app_info = { 0 };
-    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName   = "Todo: fill in application name here, whatever this is";
-    app_info.applicationVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
-    app_info.pEngineName        = "Todo: fill in engine name here, whatever this is";
-    app_info.engineVersion      = VK_MAKE_API_VERSION(0, 1, 0, 0);
-    app_info.apiVersion         = VK_API_VERSION_1_0;
-
-    /**
-     * Mandatory, tells the driver, which global (applies to entire program, not just to a specific device)
-     * extensions and validation layers we want to use
-    */
-    VkInstanceCreateInfo create_info = { 0 };
-    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    create_info.pApplicationInfo = &app_info;
-    create_info.enabledExtensionCount = vk.required_extensions_top;
-    create_info.ppEnabledExtensionNames = vk.required_extensions;
-
-    const uint32_t vk_validation_layers_count = ARRAY_SIZE(vk_validation_layers);
-    if (vk__check_if_validation_layer_is_available(vk_validation_layers[0])) {
-        create_info.enabledLayerCount = vk_validation_layers_count;
-        create_info.ppEnabledLayerNames = vk_validation_layers;
-    } else {
-#if defined(DEBUG)
-        debug__write_and_flush(DEBUG_MODULE_VULKAN, DEBUG_ERROR, "VK_LAYER_KHRONOS_validation was not found in the supported validation layers in debug build");
-        return false;
-#endif
-    }
-
-    VkResult create_instance_result = vkCreateInstance(&create_info, 0, &vk.instance);
-    if (create_instance_result != VK_SUCCESS) {
-        debug__write_and_flush(DEBUG_MODULE_VULKAN, DEBUG_ERROR, "failed to create an instance");
+    if (!vk__init_create_instance()) {
         return false;
     }
 
-    debug__write_and_flush(DEBUG_MODULE_VULKAN, DEBUG_INFO, "instance successfully created");
-
-#if defined(DEBUG)
-    // create debug messenger callback
-    VkDebugUtilsMessengerCreateInfoEXT messenger_create_info = { 0 };
-    messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    messenger_create_info.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
-    messenger_create_info.messageType =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    messenger_create_info.pfnUserCallback = &vk__debug_callback;
-    messenger_create_info.pUserData = 0;
-    if (vk__create_debug_utils_messenger_ext(vk.instance, &messenger_create_info, 0, &vk.debug_messenger) != VK_SUCCESS) {
-        debug__write_and_flush(DEBUG_MODULE_VULKAN, DEBUG_ERROR, "failed to create debug messenger");
+    if (!vk__init_setup_debug_messenger()) {
         return false;
     }
-#endif
+
+    if (!vk__create_surface()) {
+        return false;
+    }
+
+    if (!vk__pick_physical_device()) {
+        return false;
+    }
+
+    if (!vk__create_logical_device()) {
+        return false;
+    }
+
+    if (!vk__create_swapchain()) {
+        return false;
+    }
+
+    if (!vk__create_image_views()) {
+        return false;
+    }
+
+    if (!vk__create_render_pass()) {
+        return false;
+    }
+
+    if (!vk__create_gfx_pipeline()) {
+        return false;
+    }
+
+    if (!vk__create_framebuffers()) {
+        return false;
+    }
+
+    if (!vk__create_command_pool()) {
+        return false;
+    }
+
+    if (!vk__create_command_buffer()) {
+        return false;
+    }
+
+    if (!vk__create_sync_objects()) {
+        return false;
+    }
 
     return true;
 }
 
 void vk__deinit() {
+#if defined(DEBUG)
+    vk__destroy_debug_utils_messenger_ext(vk.instance, vk.debug_messenger, 0);
+#endif
+
+    vkDeviceWaitIdle(vk.logical_device);
+
+    vkDestroySemaphore(vk.logical_device, vk.semaphore_sc_image_available, 0);
+    vkDestroySemaphore(vk.logical_device, vk.semaphore_render_finished, 0);
+    vkDestroyFence(vk.logical_device, vk.fence_present_finished, 0);
+
+    vkDestroyCommandPool(vk.logical_device, vk.command_pool, 0);
+
+    for (uint32_t framebuffer_index = 0; framebuffer_index < vk.framebuffers_size; ++framebuffer_index) {
+        vkDestroyFramebuffer(vk.logical_device, vk.framebuffers[framebuffer_index], 0);
+    }
+
+    vkDestroyPipeline(vk.logical_device, vk.gfx_pipeline, 0);
+
+    vkDestroyPipelineLayout(vk.logical_device, vk.pipeline_layout, 0);
+
+    vkDestroyRenderPass(vk.logical_device, vk.render_pass, 0);
+
+    for (uint32_t image_view_index = 0; image_view_index < vk.image_views_size; ++image_view_index) {
+        vkDestroyImageView(vk.logical_device, vk.image_views[image_view_index], 0);
+    }
+
+    vkDestroySwapchainKHR(vk.logical_device, vk.sc._, 0);
+
+    vkDestroyDevice(vk.logical_device, 0);
+
+    vkDestroySurfaceKHR(vk.instance, vk.surface, 0);
+
     vkDestroyInstance(vk.instance, 0);
+
+    if (vk.required_extensions) {
+        free(vk.required_extensions);
+    }
+
+    if (vk.sc.images) {
+        free(vk.sc.images);
+    }
+
+    if (vk.image_views) {
+        free(vk.image_views);
+    }
+
+    if (vk.framebuffers) {
+        free(vk.framebuffers);
+    }
+}
+
+void vk__render() {
+    // Wait for the previous frame to finish
+    vkWaitForFences(vk.logical_device, 1, &vk.fence_present_finished, VK_TRUE, UINT64_MAX);
+    vkResetFences(vk.logical_device, 1, &vk.fence_present_finished);
+
+    // Acquire image from the swapchain
+    uint32_t image_index;
+    if (vkAcquireNextImageKHR(vk.logical_device, vk.sc._, UINT64_MAX, vk.semaphore_sc_image_available, VK_NULL_HANDLE, &image_index) != VK_SUCCESS) {
+        return ;
+    }
+
+    // Record command buffer
+    vkResetCommandBuffer(vk.command_buffer, 0);
+    if (!cb__record(vk.command_buffer, image_index)) {
+        return ;
+    }
+
+    // Submit the recorded command buffer
+    VkSubmitInfo submit_info = { 0 };
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore wait_semaphores[] = { vk.semaphore_sc_image_available };
+    VkPipelineStageFlags pipeline_state_flags[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = wait_semaphores;
+
+    // note: describe which stage(s) of the pipeline to wait for, each entry in this array corresponds to the one supplied for pWaitSemaphores
+    submit_info.pWaitDstStageMask = pipeline_state_flags;
+
+    // note: specify which command buffer to submit for execution
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &vk.command_buffer;
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = &vk.semaphore_render_finished;
+
+    if (vkQueueSubmit(vk.graphics_queue, 1, &submit_info, vk.fence_present_finished) != VK_SUCCESS) {
+        return ;
+    }
+
+    // Present the sc image
+    VkPresentInfoKHR present_info = { 0 };
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &vk.semaphore_render_finished;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &vk.sc._;
+    present_info.pImageIndices = &image_index;
+    present_info.pResults = 0; // optional
+
+    vkQueuePresentKHR(vk.graphics_queue, &present_info);
 }

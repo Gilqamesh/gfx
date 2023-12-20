@@ -24,7 +24,7 @@ bool debug__init_module() {
         return false;
     }
 
-    buffer__create(&debug.buffer, 4096);
+    buffer__create(&debug.buffer, 16384);
 
     return true;
 }

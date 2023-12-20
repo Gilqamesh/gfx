@@ -34,15 +34,20 @@ bool glfw__init() {
     glfwSetJoystickCallback(&glfw__controller_callback);
 
     uint32_t number_of_monitors;
-    monitor_t* monitors = monitor__get_monitors(&number_of_monitors);
+    GLFWmonitor** glfw_monitors = glfwGetMonitors((int32_t*) &number_of_monitors);
+    glfw.monitors_size = number_of_monitors;
+    glfw.monitors_top = number_of_monitors;
+    glfw.monitors = malloc(glfw.monitors_size * sizeof(*glfw.monitors));
     debug__write("number of connected monitors: %u", number_of_monitors);
     // todo: turn this into column-based format
     for (uint32_t monitor_index = 0; monitor_index < number_of_monitors; ++monitor_index) {
-        monitor_t monitor = monitors[monitor_index];
+        glfw.monitors[monitor_index] = calloc(1, sizeof(*glfw.monitors[monitor_index]));
+        monitor_t monitor = glfw.monitors[monitor_index];
+        monitor->glfw_monitor = glfw_monitors[monitor_index];
         int32_t width_mm;
         int32_t height_mm;
-        glfwGetMonitorPhysicalSize(monitor, &width_mm, &height_mm);
-        debug__write("  %u: %s - physical size: %ux%u [mm]", monitor_index, glfwGetMonitorName(monitor), width_mm, height_mm);
+        glfwGetMonitorPhysicalSize(monitor->glfw_monitor, &width_mm, &height_mm);
+        debug__write("  %u: %s - physical size: %ux%u [mm]", monitor_index, glfwGetMonitorName(monitor->glfw_monitor), width_mm, height_mm);
     }
 
     debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
@@ -59,6 +64,7 @@ bool glfw__init() {
 }
 
 void glfw__deinit() {
+    gfx__deinit();
     glfwTerminate();
 }
 
@@ -87,17 +93,18 @@ void window__set_clipboard(window_t self, const char* str) {
 }
 
 monitor_t* monitor__get_monitors(uint32_t* number_of_monitors) {
-    return (monitor_t*) glfwGetMonitors((int32_t*) number_of_monitors);
+    *number_of_monitors = glfw.monitors_top;
+    return glfw.monitors;
 }
 
 void monitor__get_screen_size(monitor_t self, uint32_t* w, uint32_t* h) {
-    const GLFWvidmode* mode = glfwGetVideoMode(self);
+    const GLFWvidmode* mode = glfwGetVideoMode(self->glfw_monitor);
     *w = mode->width;
     *h = mode->height;
 }
 
 void monitor__get_work_area(monitor_t self, int32_t* x, int32_t* y, uint32_t* w, uint32_t* h) {
-    glfwGetMonitorWorkarea(self, x, y, (int32_t*) w, (int32_t*) h);
+    glfwGetMonitorWorkarea(self->glfw_monitor, x, y, (int32_t*) w, (int32_t*) h);
 }
 
 const char* button__to_str(button_t button) {
@@ -158,7 +165,6 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
             glfw.windows[window_index] = malloc(sizeof(*glfw.windows[window_index]));
         }
     }
-    assert(glfw.windows_top < glfw.windows_size);
     window_t result = glfw.windows[glfw.windows_top++];
     memset(result, 0, sizeof(*result));
 
@@ -169,7 +175,7 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
     controller__set_connected(&result->controller, true);
 
     // for faster window creation and application switching, choose the closest video mode available (relative to monitor)
-    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor->glfw_monitor);
     glfwWindowHint(GLFW_RED_BITS, mode->redBits);
     glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
     glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
@@ -184,6 +190,7 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
 #if defined(VULKAN)
+    // The window surface cannot be shared with another API
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 #endif
@@ -196,7 +203,7 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
 
     window__set_current_window(result);
 
-    if (!gfx__init((gfx_symbol_loader_t) glfwGetProcAddress)) {
+    if (!gfx__init((gfx_symbol_loader_t) glfwGetProcAddress, result)) {
         return 0;
     }
 
@@ -251,7 +258,11 @@ void window__destroy(window_t self) {
 
     --glfw.windows_top;
 
-    // todo: realloc glfw.windows_size to save space?
+    // todo: realloc glfw.windows to save space?
+}
+
+GLFWwindow* window__get_glfw_window(window_t self) {
+    return self->glfw_window;
 }
 
 void window__set_default_button_actions(window_t self, bool value) {

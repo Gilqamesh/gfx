@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "helper_macros.h"
 #include "glfw.h"
+#include "system.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "third_party/stb/stb_image.h"
@@ -48,6 +49,9 @@ void game__destroy(game_t self) {
 }
 
 void game__update(game_t self, double s) {
+
+    system__usleep(1000);
+
     (void) self;
     (void) s;
 }

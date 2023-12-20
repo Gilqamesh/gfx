@@ -11,9 +11,11 @@
  * 6. Graphics pipeline (VkPipeline, VkShaderModule)
  * 7. Command pools (VkCommandPool), and Command buffers (VkCommandBuffer)
  * 8. Main loop
+ *  - wait for the previous frame to finish
  *  - acquire image from swapchain (vkAcquireNextImageKHR)
- *  - select appropriate command buffer for that image, and execute it (vkQueueSubmit)
- *  - return the image to the swapchain for presentation the the screen (vkQueuePresentKHR)
+ *  - record a command buffer which draws the scene onto that image
+ *  - submit the recorded command buffer
+ *  - present te swap chain image
 */
 
 /********************************************************************************
@@ -23,7 +25,13 @@
 # include <stdint.h>
 # include <stdbool.h>
 
-bool vk__init();
+# include "glfw.h"
+
+bool vk__init(window_t window);
 void vk__deinit();
+
+void vk__render();
+
+// todo: add glsl -> spir-v compiler
 
 #endif // VULKAN_H

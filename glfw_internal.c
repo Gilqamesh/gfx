@@ -1,3 +1,7 @@
+struct monitor {
+    GLFWmonitor* glfw_monitor;
+};
+
 struct button_state {
     uint32_t n_of_transitions;
     uint32_t n_of_repeats;
@@ -27,6 +31,10 @@ typedef struct glfw {
     window_t* windows;
     uint32_t  windows_top;
     uint32_t  windows_size;
+
+    monitor_t* monitors;
+    uint32_t   monitors_top;
+    uint32_t   monitors_size;
 } glfw_t;
 glfw_t glfw;
 
@@ -346,11 +354,46 @@ static void glfw__error_callback(int code, const char* description) {
     debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_ERROR, "code: [%d], description: [%s]", code, description);
 }
 
-static void glfw__monitor_callback(GLFWmonitor* monitor, int event) {
+static void glfw__monitor_callback(GLFWmonitor* glfw_monitor, int event) {
     if (event == GLFW_CONNECTED) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "monitor %p has connected", monitor);
+        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "monitor %s has connected", glfwGetMonitorName(glfw_monitor));
+        if (glfw.monitors_top == glfw.monitors_size) {
+            uint32_t monitors_prev_size = glfw.monitors_size;
+            if (glfw.monitors_size == 0) {
+                glfw.monitors_size = 4;
+                glfw.monitors = malloc(glfw.monitors_size * sizeof(*glfw.monitors));
+            } else {
+                glfw.monitors_size <<= 1;
+                glfw.monitors = realloc(glfw.monitors, glfw.monitors_size * sizeof(*glfw.monitors));
+            }
+            for (uint32_t monitor_index = monitors_prev_size; monitor_index < glfw.monitors_size; ++monitor_index) {
+                glfw.monitors[monitor_index] = malloc(sizeof(*glfw.monitors[monitor_index]));
+            }
+        }
+        ASSERT(glfw.monitors_top < glfw.monitors_size);
+        monitor_t monitor = glfw.monitors[glfw.monitors_top++];
+        memset(monitor, 0, sizeof(*monitor));
+        monitor->glfw_monitor = glfw_monitor;
     } else if (GLFW_DISCONNECTED) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "monitor %p has disconnected", monitor);
+        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "monitor %s has disconnected", glfwGetMonitorName(glfw_monitor));
+
+        bool found_monitor = false;
+        for (uint32_t monitor_index = 0; monitor_index < glfw.monitors_top; ++monitor_index) {
+            if (glfw.monitors[monitor_index]->glfw_monitor == glfw_monitor) {
+                found_monitor = true;
+                while (monitor_index < glfw.monitors_top - 1) {
+                    glfw.monitors[monitor_index] = glfw.monitors[monitor_index + 1];
+                    ++monitor_index;
+                }
+                break ;
+            }
+        }
+
+        ASSERT(found_monitor);
+
+        --glfw.monitors_top;
+
+        // todo: realloc glfw.monitors to save space?
     }
 }
 
@@ -762,10 +805,10 @@ static bool controller__get_connected(controller_t* self) {
 
 static void window__set_fullscreen(window_t self, bool value)  {
     if (value) {
-        const GLFWvidmode* mode = glfwGetVideoMode(self->monitor);
+        const GLFWvidmode* mode = glfwGetVideoMode(self->monitor->glfw_monitor);
         glfwSetWindowMonitor(
             self->glfw_window,
-            self->monitor,
+            self->monitor->glfw_monitor,
             0, 0,
             mode->width, mode->height,
             mode->refreshRate

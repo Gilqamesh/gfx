@@ -6,6 +6,7 @@
 static double g_tick_resolution           = 0;
 // the amount of clock cycles to query time on the platform
 static double g_get_time_epsilon_overhead = 0;
+static double g_time_at_start             = 0;
 
 # if defined(WINDOWS)
 #  include <windows.h>
@@ -62,6 +63,8 @@ void system__init() {
         get_time_epsilon_overhead = (get_time_epsilon_overhead * sample_index + (time_actual - time_expected)) / (double) (sample_index + 1);
     }
     g_get_time_epsilon_overhead = get_time_epsilon_overhead;
+
+    g_time_at_start = system__get_time();
 }
 
 void system__sleep(double s) {
@@ -81,5 +84,5 @@ void system__usleep(double us) {
 }
 
 double system__get_time() {
-    return system__platform_get_tick() * g_tick_resolution;
+    return system__platform_get_tick() * g_tick_resolution - g_time_at_start;
 }

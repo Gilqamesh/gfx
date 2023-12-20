@@ -1,13 +1,13 @@
-[20:17:50] [glfw] - info: 
+[20:19:51] [glfw] - info: 
   version string: 3.4.0 Wayland X11 GLX Null EGL OSMesa monotonic
   compiled version: 3.4.0
   runtime version: 3.4.0
   number of connected monitors: 1
     0: eDP-1 - physical size: 380x210 [mm]
-[20:17:50] [glfw] - info: controller [Title] is connected
-[20:17:50] [glfw] - error: code: [65546], description: [Cannot make current with a window that has no OpenGL or OpenGL ES context]
-[20:17:50] [glfw] - error: code: [65538], description: [Cannot set swap interval without a current OpenGL or OpenGL ES context]
-[20:17:50] [vulkan] - warn: 
+[20:19:51] [glfw] - info: controller [Title] is connected
+[20:19:51] [glfw] - error: code: [65546], description: [Cannot make current with a window that has no OpenGL or OpenGL ES context]
+[20:19:51] [glfw] - error: code: [65538], description: [Cannot set swap interval without a current OpenGL or OpenGL ES context]
+[20:19:51] [vulkan] - warn: 
   unsupported Vulkan extensions by GLFW:
   VK_KHR_device_group_creation
   VK_KHR_display
@@ -30,7 +30,7 @@
   VK_EXT_surface_maintenance1
   VK_KHR_portability_enumeration
   VK_LUNARG_direct_driver_loading
-[20:17:50] [vulkan] - warn: 
+[20:19:51] [vulkan] - warn: 
   validation layers:
   VK_LAYER_VALVE_steam_overlay_32
   VK_LAYER_VALVE_steam_overlay_64
@@ -39,6 +39,276 @@
   VK_LAYER_MESA_device_select
   VK_LAYER_NV_optimus
   VK_LAYER_KHRONOS_validation
-[20:17:50] [vulkan] - info: instance successfully created
-[20:17:50] [app] - info: target fps: 60.000000
-[20:17:50] [app] - info: adjusted expected updates: 100.000000 -> 66.666667 [updates / s]
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib64/libvulkan_broadcom.so             
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib64/libvulkan_freedreno.so            
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib64/libvulkan_intel_hasvk.so          
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib64/libvulkan_intel.so                
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib64/libvulkan_lvp.so                  
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib64/libvulkan_panfrost.so             
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib64/libvulkan_radeon.so               
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named libGLX_nvidia.so.0                           
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Error                                                                                                              
+  type:       Some event has happened that is unrelated to the specification or performance                                      
+  message:    loader_scanned_icd_add: Could not get 'vkCreateInstance' via 'vk_icdGetInstanceProcAddr' for ICD libGLX_nvidia.so.0
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib/libvulkan_broadcom.so               
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib/libvulkan_freedreno.so              
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib/libvulkan_intel_hasvk.so            
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib/libvulkan_intel.so                  
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib/libvulkan_lvp.so                    
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib/libvulkan_panfrost.so               
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Searching for ICD drivers named /usr/lib/libvulkan_radeon.so                 
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Loading layer library libVkLayer_khronos_validation.so                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Loading layer library libVkLayer_MESA_device_select.so                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 0 into new device 0                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 1 into new device 1                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - info: created vk instance 
+[20:19:51] [vulkan] - info: created vk surface on window 'Title'
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 0 into new device 0                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 1 into new device 1                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 0 into new device 0                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 1 into new device 1                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 0 into new device 0                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 1 into new device 1                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 0 into new device 0                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - error: 
+  severity:   Diagnostic                                                                   
+  type:       Some event has happened that is unrelated to the specification or performance
+  message:    Copying old device 1 into new device 1                                       
+  vk objects:
+      
+[20:19:51] [vulkan] - info: GPU selected as a vk physical device: AMD Radeon Graphics (RADV RAPHAEL_MENDOCINO)
+[20:19:51] [vulkan] - info: created vk logical device
+[20:19:51] [vulkan] - info: created vk swapchain
+[20:19:51] [vulkan] - info: created vk image views
+[20:19:51] [vulkan] - info: created vk graphics pipeline
+[20:19:51] [vulkan] - info: created vk framebuffers
+[20:19:51] [vulkan] - info: created vk command pool
+[20:19:51] [vulkan] - info: created vk command buffers
+[20:19:51] [vulkan] - info: created vk sync objects
+[20:19:51] [app] - info: target fps: 20.000000
+[20:19:52] [app] - info: expected game updates: 50.000000 -> 40.000000 [updates / frame]
+[20:19:52] [app] - info: 
+  Frame #14
+  Lost frames: 0.264722
+  Frame avg info across 14 frames
+    Game updates:            53.785714, each took: 944.833197us
+    Time:
+      Total:                 1.014722s
+      Game update expected:  1214.285714us
+      Game update actual:    944.833197us
+      Render actual:         15178.016254us
+      Frame actual:          72.480151ms, 13.796881fps
+      Frame expected:        50.000000ms, 20.000000fps
+      Left to process:       27.231884ms
+[20:19:52] [app] - info: expected game updates: 40.000000 -> 32.000000 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 32.000000 -> 25.600000 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 25.600000 -> 20.480000 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 20.480000 -> 16.384000 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 16.384000 -> 13.107200 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 13.107200 -> 10.485760 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 10.485760 -> 8.388608 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 8.388608 -> 6.710886 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 6.710886 -> 5.368709 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 5.368709 -> 4.294967 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 4.294967 -> 3.435974 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 3.435974 -> 2.748779 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 2.748779 -> 2.199023 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 2.199023 -> 1.759219 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 1.759219 -> 1.407375 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 1.407375 -> 1.125900 [updates / frame]
+[20:19:53] [app] - info: expected game updates: 1.125900 -> 0.999996 [updates / frame]
+[20:19:53] [app] - info: 
+  Frame #34
+  Lost frames: 0.280020
+  Frame avg info across 34 frames
+    Game updates:            27.382353, each took: 1136.687104us
+    Time:
+      Total:                 2.030020s
+      Game update expected:  12729.275525us
+      Game update actual:    1136.687104us
+      Render actual:         15138.114200us
+      Frame actual:          59.706485ms, 16.748600fps
+      Frame expected:        50.000000ms, 20.000000fps
+      Left to process:       0.000191ms
+[20:19:54] [app] - info: expected game updates: 0.999996 -> 0.999991 [updates / frame]
+[20:19:54] [app] - info: expected game updates: 0.999991 -> 0.999996 [updates / frame]
+[20:19:54] [app] - info: 
+  Frame #54
+  Lost frames: 0.280025
+  Frame avg info across 54 frames
+    Game updates:            17.611111, each took: 1086.141370us
+    Time:
+      Total:                 3.030025s
+      Game update expected:  26533.322611us
+      Game update actual:    1086.141370us
+      Render actual:         15125.252582us
+      Frame actual:          56.111565ms, 17.821638fps
+      Frame expected:        50.000000ms, 20.000000fps
+      Left to process:       0.000191ms
+[20:19:55] [app] - info: expected game updates: 0.999996 -> 0.999987 [updates / frame]
+[20:19:55] [app] - info: expected game updates: 0.999987 -> 0.999996 [updates / frame]
+[20:19:55] [app] - info: 
+  Frame #74
+  Lost frames: 0.280029
+  Frame avg info across 74 frames
+    Game updates:            13.121622, each took: 1062.924099us
+    Time:
+      Total:                 4.030029s
+      Game update expected:  32875.725845us
+      Game update actual:    1062.924099us
+      Render actual:         15120.306531us
+      Frame actual:          54.459849ms, 18.362152fps
+      Frame expected:        50.000000ms, 20.000000fps
+      Left to process:       0.000191ms
+[20:19:56] [app] - info: expected game updates: 0.999996 -> 0.999991 [updates / frame]
+[20:19:56] [app] - info: expected game updates: 0.999991 -> 0.999996 [updates / frame]
+[20:19:56] [app] - info: expected game updates: 0.999996 -> 0.999991 [updates / frame]
+[20:19:56] [app] - info: expected game updates: 0.999991 -> 0.999996 [updates / frame]
+[20:19:56] [app] - info: 
+  Frame #94
+  Lost frames: 0.280033
+  Frame avg info across 94 frames
+    Game updates:            10.542553, each took: 1049.589053us
+    Time:
+      Total:                 5.030033s
+      Game update expected:  36519.236622us
+      Game update actual:    1049.589053us
+      Render actual:         15117.345972us
+      Frame actual:          53.510993ms, 18.687749fps
+      Frame expected:        50.000000ms, 20.000000fps
+      Left to process:       0.000191ms
+[20:19:57] [app] - info: expected game updates: 0.999996 -> 0.999991 [updates / frame]
+[20:19:57] [app] - info: expected game updates: 0.999991 -> 0.999996 [up

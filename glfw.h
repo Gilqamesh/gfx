@@ -1,7 +1,11 @@
 #ifndef GLFW_H
 # define GLFW_H
 
-# define GLFW_INCLUDE_NONE
+# if defined(OPENGL)
+#  define GLFW_INCLUDE_NONE
+# elif defined(VULKAN)
+# define GLFW_INCLUDE_VULKAN
+# endif
 # include <GLFW/glfw3.h>
 
 # include <stdbool.h>
@@ -28,7 +32,8 @@ double glfw__get_time_s();
  * Monitor API
  ********************************************************************************/
 
-typedef GLFWmonitor* monitor_t;
+struct         monitor;
+typedef struct monitor* monitor_t;
 
 monitor_t* monitor__get_monitors(uint32_t* number_of_monitors);
 
@@ -63,6 +68,8 @@ typedef struct window* window_t;
 // @brief creates and sets window as the current one
 window_t window__create(monitor_t monitor, const char* title, uint32_t width, uint32_t height);
 void window__destroy(window_t self);
+
+GLFWwindow* window__get_glfw_window(window_t self);
 
 void window__set_default_button_actions(window_t self, bool value);
 

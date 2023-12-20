@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "app_internal.c"
 
@@ -19,7 +20,14 @@ app_t app__create(int argc, char* argv[]) {
     app_t result = calloc(1, sizeof(*result));
     memset(result, 0, sizeof(*result));
 
-    system__init();
+    result->frame_info_sample_size = 128;
+    result->frame_info_sample      = malloc(result->frame_info_sample_size * sizeof(*result->frame_info_sample));
+
+    app__push_stage(result, &loop_stage__collect_previous_frame_info);
+    app__push_stage(result, &loop_stage__pre_update);
+    app__push_stage(result, &loop_stage__update_loop);
+    app__push_stage(result, &loop_stage__render);
+    app__push_stage(result, &loop_stage__sleep_till_end_of_frame);
 
     if (!glfw__init()) {
         return false;
@@ -33,7 +41,18 @@ app_t app__create(int argc, char* argv[]) {
     }
 
     result->monitor = monitors[0];
-    result->window = window__create(result->monitor, "Title", 100, 300);
+    int32_t  screen_x;
+    int32_t  screen_y;
+    uint32_t screen_width;
+    uint32_t screen_height;
+    monitor__get_work_area(result->monitor, &screen_x, &screen_y, &screen_width, &screen_height);
+    const uint32_t window_width = screen_width * 9 / 10;
+    const uint32_t window_height = screen_height * 9 / 10;
+    // const int32_t window_x = screen_x + (screen_width - window_width) / 2;
+    // const int32_t window_y = screen_y + (screen_height - window_height) / 2;
+    // window__set_windowed_state_content_area(self->window, window_x, window_y, );
+
+    result->window = window__create(result->monitor, "Title", window_width, window_height);
     if (!result->window) {
         glfw__deinit();
         return false;
@@ -67,19 +86,8 @@ void app__run(app_t self) {
     // window__set_current_window(self->debug_window);
     // window__destroy(self->debug_window);
 
-    int32_t  screen_x;
-    int32_t  screen_y;
-    uint32_t screen_width;
-    uint32_t screen_height;
-    monitor__get_work_area(self->monitor, &screen_x, &screen_y, &screen_width, &screen_height);
     window__set_current_window(self->window);
-    const uint32_t window_width = screen_width * 9 / 10;
-    const uint32_t window_height = screen_height * 9 / 10;
-    const int32_t window_x = screen_x + (screen_width - window_width) / 2;
-    const int32_t window_y = screen_y + (screen_height - window_height) / 2;
-    window__set_windowed_state_content_area(self->window, window_x, window_y, window_width, window_height);
-    window__set_display_state(self->window, WINDOW_DISPLAY_STATE_WINDOWED);
-    window__set_window_opacity(self->window, 0.89);
+    // window__set_window_opacity(self->window, 0.89);
 
     ///////////////////////////////////////////////////////////////////////
     // const float positions[] = {
@@ -206,48 +214,30 @@ void app__run(app_t self) {
 
     ///////////////////////////////////////////////////////////////////////
 
-    const double target_fps = 60.0;
-    self->time_frame_expected = 1.0 / target_fps;
+    const double target_fps = 20.0;
     debug__write_and_flush(DEBUG_MODULE_APP, DEBUG_INFO, "target fps: %lf", target_fps);
 
-    self->time_update_expected     = 1.0 / 100.0;
-    self->time_update_actual       = self->time_update_expected;
-    self->time_start               = system__get_time();
-    self->prev_frame_info.time_end = self->time_start;
-    self->time_update_to_process   = 0.0;
-
-    while (!window__get_should_close(self->window)) {
-        // app__collect_previous_frame_info(self);
-        (void) app__collect_previous_frame_info;
-
-        glfw__poll_events();
-
-        if (window__get_should_close(self->window)) {
-            break ;
+    self->previous_frame_info.time_frame_expected  = 1.0 / target_fps;
+    self->previous_frame_info.time_update_expected = 1.0 / 1000.0;
+    system__init();
+    self->previous_frame_info.time_end = system__get_time();
+    bool stage_failed = false;
+    ASSERT(self->loop_stages_top > 0);
+    while (!stage_failed) {
+        loop_stage_t* loop_stage = 0;
+        for (uint32_t stage_id = 0; stage_id < self->loop_stages_top; ++stage_id) {
+            loop_stage = &self->loop_stages[stage_id];
+            const double loop_stage_time_start = system__get_time();
+            loop_stage->time_start = loop_stage_time_start;
+            if (stage_id > 0) {
+                self->loop_stages[stage_id - 1].time_elapsed = loop_stage_time_start - self->loop_stages[stage_id - 1].time_start;
+            }
+            loop_stage = &self->loop_stages[stage_id];
+            if (!loop_stage->loop_stage__execute(loop_stage, self)) {
+                stage_failed = true;
+                break ;
+            }
         }
-
-        app__pre_update(self);
-
-        // float* p = gl_buffer__map(&position_buffer, sizeof(float), 0);
-        // p[0] = (float) sin(system__get_time());
-        // gl_buffer__unmap(&position_buffer);
-
-        app__update_loop(self);
-
-        // geometry_object__draw(
-        //     &geometry_object,
-        //     &shader_program,
-        //     vertex_stream_specification(4, PRIMITIVE_TYPE_PATCHES, 0)
-        //     // vertex_stream_specification(6, PRIMITIVE_TYPE_PATCHES, 0)
-        // );
-        app__render(self);
-
-        const double time_mark_end_frame     = self->time_start + (self->current_frame + 1) * self->time_frame_expected;
-        const double time_till_end_of_frame  = time_mark_end_frame - system__get_time();
-        if (time_till_end_of_frame > 0.0) {
-            system__sleep(time_till_end_of_frame);
-        }
-
-        ++self->current_frame;
+        loop_stage->time_elapsed = system__get_time() - loop_stage->time_start;
     }
 }
