@@ -32,6 +32,8 @@ game_t game__create(window_t window) {
     }
     window__set_cursor(result->window, result->cursor);
 
+    // todo: game__update tests to measure the upper-bound for game__update_upper_bound?
+
     return result;
 }
 
@@ -48,9 +50,15 @@ void game__destroy(game_t self) {
     free(self);
 }
 
+double game__update_upper_bound(game_t self) {
+    (void) self;
+    
+    return 120.0 / 1000000.0;
+}
+
 void game__update(game_t self, double s) {
 
-    system__usleep(1000);
+    system__usleep(100);
 
     (void) self;
     (void) s;

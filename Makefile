@@ -28,6 +28,7 @@ common_src = \
 	system.c \
 	gfx.c \
 	game.c \
+	thread.c \
 	$(gfx_src)
 src = \
 	$(common_src) \
@@ -41,6 +42,11 @@ dps = $(src:.c=.d)
 test_dps = $(tst_src:.c=.d)
 cflags = $(shell pkg-config --cflags glfw3) -Iglfw/includes $(gfx_cflags)
 lflags = $(shell pkg-config --static --libs glfw3 $(gfx_lflags))
+
+ifeq ($(OS), Windows_NT)
+else
+	lflags += -lpthread
+endif
 
 ifeq ($(build_mode), debug)
 	cflags += -DDEBUG -g -O0 -Wall -Wextra -Werror

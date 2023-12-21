@@ -214,13 +214,13 @@ void app__run(app_t self) {
 
     ///////////////////////////////////////////////////////////////////////
 
-    const double target_fps = 20.0;
+    const double target_fps = 10.0;
     debug__write_and_flush(DEBUG_MODULE_APP, DEBUG_INFO, "target fps: %lf", target_fps);
 
-    self->previous_frame_info.time_frame_expected  = 1.0 / target_fps;
-    self->previous_frame_info.time_update_expected = 1.0 / 1000.0;
+    self->previous_frame_info.time_frame_expected = 1.0 / target_fps;
+    self->time_game_update_fixed = game__update_upper_bound(self->game);
     system__init();
-    self->previous_frame_info.time_end = system__get_time();
+    self->previous_frame_info.time_end = -self->previous_frame_info.time_frame_expected;
     bool stage_failed = false;
     ASSERT(self->loop_stages_top > 0);
     while (!stage_failed) {
