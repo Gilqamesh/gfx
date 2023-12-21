@@ -1,9 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "network.h"
 
 int main() {
     network_id_t network_id = network_id__create_server(3200);
+    if (!network_id) {
+        exit(1);
+    }
 
     char buffer[128] = { 0 };
 
