@@ -1,0 +1,130 @@
+#include "udp_protocol.h"
+
+#include <stdio.h>
+
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <ifaddrs.h>
+#include <errno.h>
+
+struct network_id {
+    int32_t socket;
+};
+
+network_id_t network_id__create_server(uint16_t port) {
+    int32_t socket_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+    if (socket_fd == -1) {
+        perror(0);
+        return 0;
+    }
+
+    struct sockaddr_in src_addr;
+    src_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    src_addr.sin_family = AF_INET;
+    src_addr.sin_port = htons(port);
+
+    if (bind(socket_fd, (const struct sockaddr*) &src_addr, sizeof(src_addr)) == -1) {
+        perror(0);
+        return 0;
+    }
+
+    network_id_t result = calloc(1, sizeof(*result));
+    if (!result) {
+        perror(0);
+        return 0;
+    }
+
+    result->socket = socket_fd;
+
+    return result;
+}
+
+network_id_t network_id__create() {
+    int32_t socket_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+    if (socket_fd == -1) {
+        perror(0);
+        return 0;
+    }
+
+    network_id_t result = calloc(1, sizeof(*result));
+    if (!result) {
+        perror(0);
+        return 0;
+    }
+
+    result->socket = socket_fd;
+
+    return result;
+}
+
+void network_id__destroy(network_id_t self) {
+    close(self->socket);
+}
+
+bool network__connect(network_id_t self, const char* ip, uint16_t port) {
+    in_addr_t dst_in_addr = inet_addr(ip);
+    if (dst_in_addr == INADDR_NONE) {
+        return false;
+    }
+
+    struct sockaddr_in dst_addr = { 0 };
+    dst_addr.sin_addr.s_addr = dst_in_addr;
+    dst_addr.sin_family = AF_INET;
+    dst_addr.sin_port = htons(port);
+    if (connect(self->socket, (const struct sockaddr*) &dst_addr, sizeof(dst_addr)) == -1) {
+        perror(0);
+        return false;
+    }
+
+    return true;
+}
+
+bool network_id__send_data(network_id_t self, const void* data, uint32_t data_size) {
+    if (send(self->socket, data, data_size, MSG_DONTWAIT) == -1) {
+        return false;
+    }
+
+    return true;
+}
+
+bool network_id__send_data_to(network_id_t self, const void* data, uint32_t data_size, const network_info_t* dst_info) {
+    struct sockaddr_in dst_addr = { 0 };
+    dst_addr.sin_addr.s_addr = dst_info->addr;
+    dst_addr.sin_family = AF_INET;
+    dst_addr.sin_port = dst_info->port;
+    if (sendto(self->socket, data, data_size, MSG_DONTWAIT, (const struct sockaddr*) &dst_addr, sizeof(dst_addr)) == -1) {
+        return false;
+    }
+
+    return true;
+}
+
+// bool network_id__get_data(network_id_t self, void* out_buffer, uint32_t out_buffer_size, uint32_t* out_message_len, const char* out_ip, uint16_t out_port) {
+bool network_id__get_data(network_id_t self, void* out_data, uint32_t out_data_size, uint32_t* out_data_len, network_info_t* out_sender_info) {
+    struct sockaddr src_addr;
+    socklen_t src_addr_len_original = sizeof(src_addr);
+    socklen_t src_addr_len = src_addr_len_original;
+    ssize_t message_len = recvfrom(self->socket, out_data, out_data_size, MSG_DONTWAIT, &src_addr, &src_addr_len);
+    if (message_len == -1) {
+        return false;
+    }
+
+    assert(message_len < out_data_size);
+
+    if (out_data_len) {
+        *out_data_len = message_len;
+    }
+
+    if (src_addr.sa_family == AF_INET && src_addr_len == src_addr_len_original && out_sender_info) {
+        struct sockaddr_in* src_addr_in = (struct sockaddr_in*) &src_addr;
+        out_sender_info->addr = src_addr_in->sin_addr.s_addr;
+        out_sender_info->port = src_addr_in->sin_port;
+    }
+
+    return true;
+}

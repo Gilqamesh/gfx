@@ -30,6 +30,7 @@
             // "program": "${workspaceFolder}/modules/data_structures/hash_set/test/hash_set.exe",
             // "program": "${workspaceFolder}/modules/data_structures/heap/test/heap.exe",
             "args": [
+                "game_server"
                 // "-h"
                 // "-fmax-errors="
                 // "${workspaceFolder}/vm_stuff/debug.h"
