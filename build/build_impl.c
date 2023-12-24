@@ -130,7 +130,7 @@ static void module__vappend_lflag(module_t self, const char* lflag_format, va_li
     if (end_index != start_index) {
         ARRAY_ENSURE_TOP(self->lflags, self->lflags_top, self->lflags_size);
         self->lflags[self->lflags_top] = 0;
-        asprintf(&self->lflags[self->lflags_top - 1], "%.*s", end_index - start_index, str + start_index);
+        my_asprintf(&self->lflags[self->lflags_top - 1], "%.*s", end_index - start_index, str + start_index);
         ++self->lflags_top;
     }
     free(str);
