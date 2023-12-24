@@ -73,6 +73,9 @@ static void module_file__append_dependency_includes(module_file_t self, module_t
 static void module__collect_lib_lflags(module_t self, module_t append_to, int32_t explore);
 static void module__collect_file_lflags(module_t self, module_t append_to, int32_t explore);
 
+static int32_t my_vasprintf(char** strp, const char* format, va_list ap);
+static int32_t my_asprintf(char** strp, const char* format, ...);
+
 static void module_file__vprepend_cflag(module_file_t self, const char* cflag_format, va_list ap) {
     module_file__vappend_cflag(self, cflag_format, ap);
 
@@ -89,7 +92,7 @@ static void module_file__vappend_cflag(module_file_t self, const char* cflag_for
 
     self->cflags[self->cflags_top] = 0;
     assert(self->cflags_top > 0);
-    vasprintf(&self->cflags[self->cflags_top - 1], cflag_format, ap);
+    my_vasprintf(&self->cflags[self->cflags_top - 1], cflag_format, ap);
     ++self->cflags_top;
 }
 
@@ -106,7 +109,7 @@ static void module__vprepend_lflag(module_t self, const char* lflag_format, va_l
 
 static void module__vappend_lflag(module_t self, const char* lflag_format, va_list ap) {
     char* str = 0;
-    vasprintf(&str, lflag_format, ap);
+    my_vasprintf(&str, lflag_format, ap);
     assert(str);
     uint32_t start_index = 0;
     uint32_t end_index   = 0;
@@ -115,7 +118,7 @@ static void module__vappend_lflag(module_t self, const char* lflag_format, va_li
             if (end_index != start_index) {
                 ARRAY_ENSURE_TOP(self->lflags, self->lflags_top, self->lflags_size);
                 self->lflags[self->lflags_top] = 0;
-                asprintf(&self->lflags[self->lflags_top - 1], "%.*s", end_index - start_index, str + start_index);
+                my_asprintf(&self->lflags[self->lflags_top - 1], "%.*s", end_index - start_index, str + start_index);
                 ++self->lflags_top;
 
                 start_index = end_index + 1;
@@ -296,4 +299,28 @@ static void module__collect_file_lflags(module_t self, module_t append_to, int32
         self->transient_flag         = 0;
         self->transient_flag_is_used = 0;
     }
+}
+
+static int32_t my_vasprintf(char** strp, const char* format, va_list ap) {
+    const uint32_t max_cflag_len = 256;
+    char* str = malloc(max_cflag_len);
+    const int32_t bytes_needed = vsnprintf(str, max_cflag_len, format, ap);
+    assert(bytes_needed >= 0);
+    assert(bytes_needed < (int32_t) max_cflag_len);
+    *strp = malloc(bytes_needed + 1);
+    strncpy(*strp, str, bytes_needed + 1);
+    free(str);
+
+    return bytes_needed;
+}
+
+static int32_t my_asprintf(char** strp, const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+
+    int32_t result = my_vasprintf(strp, format, ap);
+
+    va_end(ap);
+
+    return result;
 }
