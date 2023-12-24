@@ -4,13 +4,11 @@
 # include <stdint.h>
 # include <stdbool.h>
 
-# include "glfw.h"
-
 /********************************************************************************
  * Module API
  ********************************************************************************/
 
-bool gl__init_context(window_t window);
+bool gl__init_context();
 
 uint32_t gl__number_of_extensions();
 const char* gl__get_extension_str(uint32_t index);
@@ -128,8 +126,6 @@ struct attached_buffer_stencil {
 struct attached_buffer_depth_stencil {
     attached_buffer_t base;
 };
-
-const gl_buffer_t* gl_buffer__default_framebuffer();
 
 /**
  * @param data used to initialize the buffer, if NULL, the buffer will be uninitialized

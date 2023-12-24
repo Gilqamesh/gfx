@@ -19,6 +19,7 @@ game_server_t game_server__create(uint16_t port) {
     }
 
     game_t game_state = game__create();
+    (void) game_state;
 
     game_server_t result = calloc(1, sizeof(*result));
     if (!result) {
@@ -26,6 +27,9 @@ game_server_t game_server__create(uint16_t port) {
     }
 
     result->network_id = network_id;
+    
+    result->frame_info_sample_size = 128;
+    result->frame_info_sample = malloc(result->frame_info_sample_size * sizeof(*result->frame_info_sample));
 
     game_server__push_stage(result, &loop_stage__collect_previous_frame_info);
     game_server__push_stage(result, &loop_stage__poll_inputs);
@@ -70,5 +74,6 @@ void game_server__run(game_server_t self, double target_fps) {
 }
 
 double game_server__time(game_server_t self) {
+    (void) self;
     return system__get_time();
 }

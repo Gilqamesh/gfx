@@ -18,7 +18,7 @@ bool debug__init_module() {
         debug.error_module_availability[error_module_availability_index] = true;
     }
 
-    debug.error_file = fopen("debug.txt", "w");
+    debug.error_file = fopen("debug/debug.txt", "w");
     if (!debug.error_file) {
         return false;
     }

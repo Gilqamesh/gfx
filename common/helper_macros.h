@@ -18,13 +18,13 @@
 
 // todo: create dynamic array module
 #define ARRAY_ENSURE_TOP(array, array_top, array_size) do { \
-    if (array_top >= array_size) { \
-        if (array_size == 0) { \
-            array_size = 8; \
-            array = malloc(array_size * sizeof(array[0])); \
+    if ((array_top) >= (array_size)) { \
+        if ((array_size) == 0) { \
+            (array_size) = 8; \
+            (array) = malloc((array_size) * sizeof((array)[0])); \
         } else { \
-            array_size <<= 1; \
-            array = realloc(array, array_size * sizeof(array[0])); \
+            (array_size) <<= 1; \
+            (array) = realloc((array), (array_size) * sizeof((array)[0])); \
         } \
     } \
 } while (0)

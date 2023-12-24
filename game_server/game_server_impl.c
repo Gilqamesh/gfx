@@ -108,6 +108,19 @@ static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_serve
     (void) self;
     (void) game_server;
 
+    char packet[256] = { 0 };
+    uint32_t received_data_len = 0;
+    network_info_t sender_network_info;
+    if (network_id__get_data(game_server->network_id, packet, ARRAY_SIZE(packet), &received_data_len, &sender_network_info)) {
+        debug__write_and_flush(
+            DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+            "received data from client: %s", packet
+        );
+
+        const char* msg = "hello from server, this is an ack that I have received your packet";
+        network_id__send_data_to(game_server->network_id, msg, strlen(msg), &sender_network_info);
+    }
+
     // todo: poll inputs
     // note: a client can manipulate the server such as shut it down, restart, etc.?
 

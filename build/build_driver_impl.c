@@ -1,67 +1,92 @@
-#define DEBUG_MODULE        "debug"
-#define TP_MODULE           "transport_protocol"
-#define GAME_SERVER_MODULE  "game_server"
-#define SYSTEM_MODULE       "system"
-#define GAME_MODULE         "game"
+struct         supported_module;
+enum           supported_module_name;
+typedef struct supported_module      supported_module_t;
+typedef enum   supported_module_name supported_module_name_t;
 
-const char* module_names[] = {
+enum supported_module_name {
+    COMMON_MODULE,
     DEBUG_MODULE,
     TP_MODULE,
     GAME_SERVER_MODULE,
+    GAME_CLIENT_MODULE,
     SYSTEM_MODULE,
-    GAME_MODULE
+    GAME_MODULE,
+    GFX_MODULE,
+
+    _SUPPORTED_MODULE_NAME_SIZE
 };
 
-typedef struct module_wrapper {
+struct supported_module {
     module_t module;
-    void    (*compiler__compile_module)(compiler_t self, struct module_wrapper* module_wrapper);
+    const char* dir;
+    int32_t is_link_option;
+    void (*supported_module__init_and_compile)(supported_module_t* self);
+};
 
-    /**
-     * 0  - hasn't been compiled yet
-     * >0 - compiled
-    */
-    int     is_compiled;
-} module_wrapper_t;
+static supported_module_t* supported_modules__ensure_module(supported_module_name_t supported_module_name);
 
-typedef struct build_driver {
-    // todo: change this to hash map for quick find lookup
-    uint32_t          module_wrappers_size;
-    uint32_t          module_wrappers_top;
-    module_wrapper_t* module_wrappers;
-} build_driver_t;
-
-static build_driver_t build_driver;
-
-static void              build_driver__init();
-static void              build_driver__add_module_wrapper(const char* module_dir, void (*compiler__compile_module)(compiler_t self, module_wrapper_t* module_wrapper));
-static module_wrapper_t* build_driver__find_module_wrapper(const char* module_dir);
-static void              build_driver__wait_for_compilations();
+static void supported_module__init_and_compile_wrapper(supported_module_t* self);
+static void module__add_supported_dependency(module_t self, supported_module_name_t supported_dependency_name);
 
 static void module_file__add_common_cflags(module_file_t module_file);
 static void module_file__add_debug_cflags(module_file_t module_file);
 static void module_file__add_release_cflags(module_file_t module_file);
 
-static void compiler__ensure_module_dependency(compiler_t self, module_wrapper_t* module_wrapper, const char* dependency_module_dir);
-static void compiler__compile_debug_module(compiler_t self, module_wrapper_t* module_wrapper);
-static void compiler__compile_game_server_module(compiler_t self, module_wrapper_t* module_wrapper);
-static void compiler__compile_transport_protocol_module(compiler_t self, module_wrapper_t* module_wrapper);
-static void compiler__compile_system_module(compiler_t self, module_wrapper_t* module_wrapper);
-static void compiler__compile_game_module(compiler_t self, module_wrapper_t* module_wrapper);
+static void supported_module__init_common_module(supported_module_t* self);
+static void supported_module__init_debug_module(supported_module_t* self);
+static void supported_module__init_game_server_module(supported_module_t* self);
+static void supported_module__init_game_client_module(supported_module_t* self);
+static void supported_module__init_transport_protocol_module(supported_module_t* self);
+static void supported_module__init_system_module(supported_module_t* self);
+static void supported_module__init_game_module(supported_module_t* self);
+static void supported_module__init_gfx_module(supported_module_t* self);
 
-static void build_driver__init() {
-    build_driver__add_module_wrapper(DEBUG_MODULE, &compiler__compile_debug_module);
-    build_driver__add_module_wrapper(TP_MODULE, &compiler__compile_transport_protocol_module);
-    build_driver__add_module_wrapper(GAME_SERVER_MODULE, &compiler__compile_game_server_module);
-    build_driver__add_module_wrapper(SYSTEM_MODULE, &compiler__compile_system_module);
-    build_driver__add_module_wrapper(GAME_MODULE, &compiler__compile_game_module);
-}
+static compiler_t compiler;
 
-static void build_driver__add_module_wrapper(const char* module_dir, void (*compiler__compile_module)(compiler_t self, module_wrapper_t* module_wrapper)) {
-    ARRAY_ENSURE_TOP(build_driver.module_wrappers, build_driver.module_wrappers_top, build_driver.module_wrappers_size);
-    module_wrapper_t* module_wrapper = &build_driver.module_wrappers[build_driver.module_wrappers_top];
-    module_wrapper->module = module__create(module_dir);
-    module_wrapper->compiler__compile_module = compiler__compile_module;
-    ++build_driver.module_wrappers_top;
+static supported_module_t supported_modules[_SUPPORTED_MODULE_NAME_SIZE] = {
+    {
+        .dir = "common",
+        .supported_module__init_and_compile = &supported_module__init_common_module
+    },
+    {
+        .dir = "debug",
+        .supported_module__init_and_compile = &supported_module__init_debug_module
+    },
+    {
+        .dir = "transport_protocol",
+        .supported_module__init_and_compile = &supported_module__init_transport_protocol_module
+    },
+    {
+        .dir = "game_server",
+        .supported_module__init_and_compile = &supported_module__init_game_server_module
+    },
+    {
+        .dir = "game_client",
+        .supported_module__init_and_compile = &supported_module__init_game_client_module
+    },
+    {
+        .dir = "system",
+        .supported_module__init_and_compile = &supported_module__init_system_module
+    },
+    {
+        .dir = "game",
+        .supported_module__init_and_compile = &supported_module__init_game_module
+    },
+    {
+        .dir = "gfx",
+        .supported_module__init_and_compile = &supported_module__init_gfx_module
+    }
+};
+
+static supported_module_t* supported_modules__ensure_module(supported_module_name_t supported_module_name) {
+    assert(supported_module_name < _SUPPORTED_MODULE_NAME_SIZE);
+    supported_module_t* supported_module = &supported_modules[supported_module_name];
+    if (!supported_module->module) {
+        supported_module->module = module__create(supported_module->dir);
+    }
+    assert(supported_module->module);
+
+    return supported_module;
 }
 
 static void module_file__add_common_cflags(module_file_t self) {
@@ -83,88 +108,149 @@ static void module_file__add_release_cflags(module_file_t self) {
     module_file__append_cflag(self, "-Wno-unused-function");
 }
 
-static void compiler__compile_debug_module(compiler_t self, module_wrapper_t* module_wrapper) {
-    module_file_t debug_file = module__add_file(module_wrapper->module, "debug.c");
+static void supported_module__init_common_module(supported_module_t* self) {
+    module_file_t hash_set_file = module__add_file(self->module, "hash_set.c");
+
+    module_file__add_common_cflags(hash_set_file);
+    module_file__add_debug_cflags(hash_set_file);
+    
+    module_file_t hash_map_file = module__add_file(self->module, "hash_map.c");
+    module_file__add_common_cflags(hash_map_file);
+    module_file__add_debug_cflags(hash_map_file);
+
+    (void) module_file__add_release_cflags;
+
+    // TODO: add module level cflags that needs to apply to modules who depend on this module
+//     module_file__append_cflag(self->module, "-Wall");
+//     module_file__append_cflag(self->module, "-Wextra");
+//     module_file__append_cflag(self->module, "-Werror");
+//     module_file__append_cflag(self->module, "-Icommon");
+
+// #if defined(DEBUG)
+//     module_file__append_cflag(self->module, "-DDEBUG");
+//     module_file__append_cflag(self->module, "-g");
+//     module_file__append_cflag(self->module, "-O0");
+// #elif defined(RELEASE)
+//     module_file__append_cflag(self->module, "-DRELEASE");
+//     module_file__append_cflag(self->module, "-O3");
+//     module_file__append_cflag(self->module, "-Wno-unused-function");
+// #else
+// # error "build mode can either be debug or release"
+// #endif
+}
+
+static void supported_module__init_debug_module(supported_module_t* self) {
+    module_file_t debug_file = module__add_file(self->module, "debug.c");
 
     module_file__add_common_cflags(debug_file);
     module_file__add_debug_cflags(debug_file);
-    (void) module_file__add_release_cflags;
-
-    module__compile(module_wrapper->module, self);
 }
 
-static void compiler__compile_game_server_module(compiler_t self, module_wrapper_t* module_wrapper) {
-    module_file_t game_server_file = module__add_file(module_wrapper->module, "game_server.c");
+static void supported_module__init_game_server_module(supported_module_t* self) {
+    module_file_t game_server_file = module__add_file(self->module, "game_server.c");
     module_file__add_common_cflags(game_server_file);
     module_file__add_debug_cflags(game_server_file);
 
-    module_file_t game_server_driver_file = module__add_file(module_wrapper->module, "game_server_driver.c");
-    module_file__add_common_cflags(game_server_driver_file);
-    module_file__add_debug_cflags(game_server_driver_file);
+    if (self->is_link_option) {
+        module_file_t game_server_driver_file = module__add_file(self->module, "game_server_driver.c");
+        module_file__add_common_cflags(game_server_driver_file);
+        module_file__add_debug_cflags(game_server_driver_file);
+    }
 
-    compiler__ensure_module_dependency(self, module_wrapper, TP_MODULE);
-    compiler__ensure_module_dependency(self, module_wrapper, SYSTEM_MODULE);
-    compiler__ensure_module_dependency(self, module_wrapper, DEBUG_MODULE);
-    compiler__ensure_module_dependency(self, module_wrapper, GAME_MODULE);
-
-    module__compile(module_wrapper->module, self);
+    module__add_supported_dependency(self->module, TP_MODULE);
+    module__add_supported_dependency(self->module, SYSTEM_MODULE);
+    module__add_supported_dependency(self->module, DEBUG_MODULE);
+    module__add_supported_dependency(self->module, GAME_MODULE);
 }
 
-static void compiler__compile_transport_protocol_module(compiler_t self, module_wrapper_t* module_wrapper) {
-    module_file_t udp_tp_file = module__add_file(module_wrapper->module, "udp_protocol.c");
+static void supported_module__init_game_client_module(supported_module_t* self) {
+    module_file_t game_client_file = module__add_file(self->module, "game_client.c");
+    module_file__add_common_cflags(game_client_file);
+    module_file__add_debug_cflags(game_client_file);
+
+    if (self->is_link_option) {
+        module_file_t game_client_driver_file = module__add_file(self->module, "game_client_driver.c");
+        module_file__add_common_cflags(game_client_driver_file);
+        module_file__add_debug_cflags(game_client_driver_file);
+    }
+
+    module__add_supported_dependency(self->module, TP_MODULE);
+    module__add_supported_dependency(self->module, SYSTEM_MODULE);
+    module__add_supported_dependency(self->module, DEBUG_MODULE);
+    module__add_supported_dependency(self->module, GAME_MODULE);
+}
+
+static void supported_module__init_transport_protocol_module(supported_module_t* self) {
+    module_file_t udp_tp_file = module__add_file(self->module, "udp_protocol.c");
 
     module_file__add_common_cflags(udp_tp_file);
     module_file__add_debug_cflags(udp_tp_file);
-
-    module__compile(module_wrapper->module, self);
 }
 
-static void compiler__compile_system_module(compiler_t self, module_wrapper_t* module_wrapper) {
-    module_file_t system_file = module__add_file(module_wrapper->module, "system.c");
+static void supported_module__init_system_module(supported_module_t* self) {
+    module_file_t system_file = module__add_file(self->module, "system.c");
 
     module_file__add_common_cflags(system_file);
     module_file__add_debug_cflags(system_file);
 
-    module_file_t thread_file = module__add_file(module_wrapper->module, "thread.c");
+    module_file_t thread_file = module__add_file(self->module, "thread.c");
 
     module_file__add_common_cflags(thread_file);
     module_file__add_debug_cflags(thread_file);
-
-    module__compile(module_wrapper->module, self);
 }
 
-static void compiler__compile_game_module(compiler_t self, module_wrapper_t* module_wrapper) {
-    module_file_t game_file = module__add_file(module_wrapper->module, "game.c");
+static void supported_module__init_game_module(supported_module_t* self) {
+    module_file_t game_file = module__add_file(self->module, "game.c");
 
     module_file__add_common_cflags(game_file);
     module_file__add_debug_cflags(game_file);
 
-    module__compile(module_wrapper->module, self);
+    module__append_lflag(self->module, "-lm");
+
+    module__add_supported_dependency(self->module, GFX_MODULE);
+    module__add_supported_dependency(self->module, DEBUG_MODULE);
+    module__add_supported_dependency(self->module, SYSTEM_MODULE);
 }
 
-static void build_driver__wait_for_compilations() {
-    for (uint32_t module_wrapper_index = 0; module_wrapper_index < build_driver.module_wrappers_top; ++module_wrapper_index) {
-        module__wait_for_compilation(build_driver.module_wrappers[module_wrapper_index].module);
-    }
+static void supported_module__init_gfx_module(supported_module_t* self) {
+    module_file_t gfx_file = module__add_file(self->module, "gfx.c");
+
+    module_file__add_common_cflags(gfx_file);
+    module_file__add_debug_cflags(gfx_file);
+
+// #if defined(VULKAN)
+//     module_file__append_cflag(gfx_file, "-DVULKAN");
+
+// #elif defined(OPENGL)
+//     module_file__append_cflag(gfx_file, "-DOPENGL");
+// #else
+// # error "graphics backend must either be defined to "opengl" or "vulkan""
+// #endif
+
+    module_file__append_cflag(gfx_file, GLFW_CFLAGS);
+    module__append_lflag(self->module, GLFW_LFLAGS);
+
+    module_file__append_cflag(gfx_file, GFX_BACKEND_CFLAGS);
+    module__append_lflag(self->module, GFX_BACKEND_LFLAGS);
+
+    module__add_supported_dependency(self->module, DEBUG_MODULE);
 }
 
-static module_wrapper_t* build_driver__find_module_wrapper(const char* module_dir) {
-    for (uint32_t module_wrapper_index = 0; module_wrapper_index < build_driver.module_wrappers_top; ++module_wrapper_index) {
-        module_wrapper_t* module_wrapper = &build_driver.module_wrappers[module_wrapper_index];
-        if (strcmp(module_dir, module__dir(module_wrapper->module)) == 0) {
-            return module_wrapper;
-        }
+static void supported_module__init_and_compile_wrapper(supported_module_t* self) {
+    if (module__is_compiled(self->module)) {
+        return ;
     }
 
-    return 0;
+    self->supported_module__init_and_compile(self);
+
+    module__compile(self->module, compiler);
 }
 
-static void compiler__ensure_module_dependency(compiler_t self, module_wrapper_t* module_wrapper, const char* dependency_module_dir) {
-    module_wrapper_t* dependency_wrapper = build_driver__find_module_wrapper(dependency_module_dir);
-    assert(dependency_wrapper);
-    if (!dependency_wrapper->is_compiled) {
-        dependency_wrapper->compiler__compile_module(self, dependency_wrapper);
+static void module__add_supported_dependency(module_t self, supported_module_name_t supported_dependency_name) {
+    supported_module_t* supported_dependency = supported_modules__ensure_module(supported_dependency_name);
+    if (module__is_dependency(self, supported_dependency->module)) {
+        return ;
     }
-
-    module__add_dependency(module_wrapper->module, dependency_wrapper->module);
+    module__add_dependency(self, supported_dependency->module);
+    supported_module__init_and_compile_wrapper(supported_dependency);
 }

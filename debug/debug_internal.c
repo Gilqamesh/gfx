@@ -35,6 +35,7 @@ static const char* debug_module__to_str(debug_module_t module) {
     case DEBUG_MODULE_VULKAN:      return "vulkan";
     case DEBUG_MODULE_GAME:        return "game";
     case DEBUG_MODULE_GAME_SERVER: return "game server";
+    case DEBUG_MODULE_GAME_CLIENT: return "game client";
     default: ASSERT(false);
     }
 

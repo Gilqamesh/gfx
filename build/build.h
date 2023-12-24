@@ -6,6 +6,7 @@
  ********************************************************************************/
 
 # include <stdarg.h>
+# include <stdint.h>
 
 struct         compiler;
 typedef struct compiler* compiler_t;
@@ -26,25 +27,20 @@ module_t module__create(const char* dir);
 void module__destroy(module_t self);
 const char* module__dir(module_t self);
 module_file_t module__add_file(module_t self, const char* src);
-void module__add_dependency(module_t self, module_t dependency);
-void module__compile(module_t self, compiler_t compiler);
-void module__wait_for_compilation(module_t self);
-
 void module_file__prepend_cflag(module_file_t self, const char* cflag_format, ...);
 void module_file__append_cflag(module_file_t self, const char* cflag_format, ...);
-void module_file__prepend_lflag(module_file_t self, const char* lflag_format, ...);
-void module_file__append_lflag(module_file_t self, const char* lflag_format, ...);
-
-/********************************************************************************
- * Program API
- ********************************************************************************/
-
-struct         program;
-typedef struct program* program_t;
-
-program_t program__create(const char* binary_name);
-void program__destroy(program_t self);
-void program__add_module(program_t self, module_t module);
-int program__link(program_t self);
+void module__prepend_lflag(module_t self, const char* lflag_format, ...);
+void module__append_lflag(module_t self, const char* lflag_format, ...);
+void module__add_dependency(module_t self, module_t dependency);
+int32_t module__is_dependency(module_t self, module_t dependency);
+void module__compile(module_t self, compiler_t compiler);
+/**
+ * 0  - hasn't been compiled yet
+ * >0 - compiled
+ * <0 - compiling
+*/
+int32_t module__is_compiled(module_t self);
+void module__wait_for_compilation(module_t self);
+int32_t module__link(module_t self, compiler_t compiler);
 
 #endif // BUILD_H

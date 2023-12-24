@@ -48,6 +48,7 @@
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",
+            "internalConsoleOptions": "neverOpen",
             "externalConsole": true
         }
     ]

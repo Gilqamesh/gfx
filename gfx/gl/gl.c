@@ -1,15 +1,8 @@
-#include "gl.h"
+#include "glad/include/glad/glad.h"
 
-#include "debug.h"
-#include "helper_macros.h"
+#include "gl_impl.c"
 
-#include <glad/glad.h>
-#include <string.h>
-
-#include "gl_internal.c"
-
-bool gl__init_context(window_t window) {
-    window__set_current_window(window);
+bool gl__init_context() {
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         debug__write_and_flush(DEBUG_MODULE_GL, DEBUG_ERROR, "gladLoadGLLoader failed to load opengl function pointers");
         return false;
@@ -42,10 +35,6 @@ uint32_t gl__number_of_extensions() {
 const char* gl__get_extension_str(uint32_t index) {
     ASSERT(index < gl__number_of_extensions());
     return (const char*) glGetStringi(GL_EXTENSIONS, index);
-}
-
-const gl_buffer_t* gl_buffer__default_framebuffer() {
-    return default_frame_buffer;
 }
 
 void gl_buffer__create(
