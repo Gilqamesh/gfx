@@ -39,6 +39,7 @@ game_client_t game_client__create(const char* server_ip, uint16_t server_port) {
     }
 
     result->udp_socket = udp_socket;
+    memcpy(&result->server_addr, &server_addr, sizeof(result->server_addr));
     
     result->frame_info_sample_size = 128;
     result->frame_info_sample = malloc(result->frame_info_sample_size * sizeof(*result->frame_info_sample));

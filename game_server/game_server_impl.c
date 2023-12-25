@@ -180,11 +180,15 @@ static void game_server__receive_packets(game_server_t self) {
         }
         if (sequence_id_diff >= max_sequence_id_diff) {
             self->client.connected = false;
-            debug__write_and_flush(
-                DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+            debug__write(
                 "client disconnected from the server: %u:%u",
                 self->client.addr.addr, self->client.addr.port
             );
+            debug__write(
+                "last known packet from them: %u, local sequence id: %u",
+                self->client.sequence_id, self->sequence_id
+            );
+            debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
         }
     }
 }
