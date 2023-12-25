@@ -19,7 +19,12 @@ game_client_t game_client__create(const char* server_ip, uint16_t server_port) {
         return 0;
     }
 
-    if (!udp_socket__connect(&udp_socket, server_ip, server_port)) {
+    network_addr_t server_addr;
+    if (!network_addr__create(&server_addr, server_ip, server_port)) {
+        return false;
+    }
+
+    if (!udp_socket__connect(&udp_socket, server_addr)) {
         udp_socket__destroy(&udp_socket);
         return 0;
     }

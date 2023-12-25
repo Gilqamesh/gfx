@@ -20,25 +20,26 @@ struct loop_stage {
 };
 
 struct game_client {
-    udp_socket_t  udp_socket;
+    udp_socket_t   udp_socket;
 
-    uint32_t      sequence_id;
+    network_addr_t server_addr;
+    uint32_t       sequence_id;
 
-    game_t        game_state;
+    game_t         game_state;
 
-    uint32_t      current_frame;
-    double        time_lost;
-    double        frames_lost;
-    double        time_game_update_fixed;
-    double        time_update_to_process;
-    uint32_t      loop_stages_top;
-    uint32_t      loop_stages_size;
-    loop_stage_t* loop_stages;
-    frame_info_t  previous_frame_info;
-    uint32_t      frame_info_sample_index_tail;
-    uint32_t      frame_info_sample_index_head;
-    uint32_t      frame_info_sample_size;
-    frame_info_t* frame_info_sample;
+    uint32_t       current_frame;
+    double         time_lost;
+    double         frames_lost;
+    double         time_game_update_fixed;
+    double         time_update_to_process;
+    uint32_t       loop_stages_top;
+    uint32_t       loop_stages_size;
+    loop_stage_t*  loop_stages;
+    frame_info_t   previous_frame_info;
+    uint32_t       frame_info_sample_index_tail;
+    uint32_t       frame_info_sample_index_head;
+    uint32_t       frame_info_sample_size;
+    frame_info_t*  frame_info_sample;
 };
 
 static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_client_t game_client);
@@ -114,31 +115,53 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
     return true;
 }
 
+static void game_client__receive_packet(game_client_t self) {
+    packet_t packet;
+    uint32_t received_data_len = 0;
+    network_addr_t sender_addr;
+    if (udp_socket__get_data(&self->udp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
+        if (received_data_len == sizeof(packet)) {
+            if (
+                sender_addr.addr == self->server_addr.addr &&
+                sender_addr.port == self->server_addr.port
+            ) {
+                // received packet is from the server
+                debug__write_and_flush(
+                    DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                    "received packet from server, remote seq id: %u, local seq id: %u",
+                    packet.sequence_id, self->sequence_id
+                );
+            } else {
+                // packet is not from server -> discard packet
+                debug__write_and_flush(
+                    DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                    "discarded packet as it is not from the server, received from: <todo with inet_ntop>"
+                );
+            }
+        } else {
+            debug__write_and_flush(
+                DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
+                "unknown packet size received: %u, expected: %u",
+                received_data_len, sizeof(packet)
+            );
+        }
+    }
+}
+
+static void game_client__send_packet(game_client_t self) {
+    packet_t packet = {
+        .sequence_id = self->sequence_id
+    };
+    udp_socket__send_data(&self->udp_socket, &packet, sizeof(packet));
+}
+
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_client_t game_client) {
     (void) self;
-    (void) game_client;
 
-    packet_t packet = {
-        .sequence_id = game_client->sequence_id
-    };
-    udp_socket__send_data(&game_client->udp_socket, &packet, sizeof(packet));
-
-    char msg[256] = { 0 };
-    if (udp_socket__get_data(&game_client->udp_socket, msg, ARRAY_SIZE(msg), 0, 0)) {
-        debug__write_and_flush(
-            DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
-            "server: %s", msg
-        );
-    }
+    game_client__receive_packet(game_client);
+    game_client__send_packet(game_client);
 
     ++game_client->sequence_id;
-
-    // todo: poll inputs
-    // note: a client can manipulate the server such as shut it down, restart, etc.?
-
-    // if (window__get_should_close(game_client->window)) {
-    //     return false;
-    // }
 
     return true;
 }

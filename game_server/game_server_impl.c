@@ -123,27 +123,23 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
     return true;
 }
 
-static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_server) {
-    (void) self;
-
+static void game_server__receive_packets(game_server_t self) {
     packet_t packet;
     uint32_t received_data_len = 0;
     network_addr_t sender_addr;
-    if (udp_socket__get_data(&game_server->udp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
+    if (udp_socket__get_data(&self->udp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
         if (received_data_len == sizeof(packet)) {
-            if (game_server->client.connected) {
+            if (self->client.connected) {
                 if (
-                    sender_addr.addr == game_server->client.addr.addr &&
-                    sender_addr.port == game_server->client.addr.port
+                    sender_addr.addr == self->client.addr.addr &&
+                    sender_addr.port == self->client.addr.port
                 ) {
                     // received packet is from client
                     debug__write_and_flush(
                         DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
                         "received packet from client, remote seq id: %u, local seq id: %u",
-                        packet.sequence_id, game_server->sequence_id
+                        packet.sequence_id, self->sequence_id
                     );
-                    // update their connection
-                    game_server->client.sequence_id = packet.sequence_id;
                 } else {
                     // packet is not from client -> discard packet
                     debug__write_and_flush(
@@ -153,43 +149,62 @@ static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_serve
                 }
             } else {
                 // accept new connection
-                game_server->client.connected = true;
-                game_server->client.addr.addr = sender_addr.addr;
-                game_server->client.addr.port = sender_addr.port;
-                game_server->client.sequence_id = packet.sequence_id;
-                char msg[128] = { 0 };
-                snprintf(msg, ARRAY_SIZE(msg), "Welcome to the server!\n");
-                udp_socket__send_data_to(&game_server->udp_socket, msg, strlen(msg), &sender_addr);
+                self->client.connected = true;
+                self->client.addr.addr = sender_addr.addr;
+                self->client.addr.port = sender_addr.port;
+                self->client.sequence_id = packet.sequence_id;
+                debug__write_and_flush(
+                    DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                    "client connected to the server: %u:%u",
+                    sender_addr.addr, sender_addr.port
+                );
             }
+        } else {
+            debug__write_and_flush(
+                DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                "unknown packet size received: %u, expected: %u",
+                received_data_len, sizeof(packet)
+            );
         }
     }
 
-    if (game_server->client.connected) {
+    if (self->client.connected) {
         // disconnect client that hasn't sent packets in a long time
         const uint32_t max_sequence_id_diff = 128;
         uint32_t sequence_id_diff = 0;
-        if (game_server->sequence_id > game_server->client.sequence_id) {
-            sequence_id_diff = game_server->sequence_id - game_server->client.sequence_id;
+        if (self->sequence_id > self->client.sequence_id) {
+            sequence_id_diff = self->sequence_id - self->client.sequence_id;
         } else {
             // our sequence_id wrapper around, but client's hasn't yet
-            sequence_id_diff = game_server->client.sequence_id - game_server->sequence_id;
+            sequence_id_diff = self->client.sequence_id - self->sequence_id;
         }
         if (sequence_id_diff >= max_sequence_id_diff) {
-            game_server->client.connected = false;
-            char msg[128] = { 0 };
-            snprintf(msg, ARRAY_SIZE(msg), "Sorry you were away for too long. :(\n");
-            udp_socket__send_data_to(&game_server->udp_socket, msg, strlen(msg), &sender_addr);
+            self->client.connected = false;
+            debug__write_and_flush(
+                DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                "client dconnected from the server: %u:%u",
+                self->client.addr.addr, self->client.addr.port
+            );
         }
     }
+}
+
+static void game_server__send_packets(game_server_t self) {
+    if (self->client.connected) {
+        packet_t packet = {
+            .sequence_id = self->sequence_id
+        };
+        udp_socket__send_data_to(&self->udp_socket, &packet, sizeof(packet), self->client.addr);
+    }
+}
+
+static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_server) {
+    (void) self;
+
+    game_server__receive_packets(game_server);
+    game_server__send_packets(game_server);
 
     ++game_server->sequence_id;
-
-    // todo: poll inputs
-    // note: a client can manipulate the server such as shut it down, restart, etc.?
-
-    // if (window__get_should_close(game_server->window)) {
-    //     return false;
-    // }
 
     return true;
 }
