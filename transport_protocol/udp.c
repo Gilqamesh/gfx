@@ -12,27 +12,26 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-bool udp_socket__create(udp_socket_t* self, const char* in_ip, uint16_t in_port) {
+bool udp_socket__create(udp_socket_t* self, uint16_t port) {
     struct sockaddr_in src_addr;
-    if (in_ip) {
-        in_addr_t dst_in_addr = inet_addr(in_ip);
-        if (dst_in_addr == INADDR_NONE) {
-            return false;
-        }
-        src_addr.sin_addr.s_addr = dst_in_addr;
-    } else {
-        src_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    }
+    src_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     src_addr.sin_family = AF_INET;
-    src_addr.sin_port = htons(in_port);
+    src_addr.sin_port = htons(port);
 
     int32_t socket_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
     if (socket_fd == -1) {
         perror(0);
         return false;
     }
+    int opt = 1;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (const void*) &opt, sizeof(opt)) != 0) {
+        perror(0);
+        close(socket_fd);
+        return false;
+    }
 
     if (bind(socket_fd, (const struct sockaddr*) &src_addr, sizeof(src_addr)) == -1) {
+        fprintf(stderr, "%d\n", errno);
         perror(0);
         return false;
     }

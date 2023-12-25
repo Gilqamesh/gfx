@@ -14,7 +14,7 @@
 
 game_client_t game_client__create(const char* server_ip, uint16_t server_port) {
     udp_socket_t udp_socket;
-    if (!udp_socket__create(&udp_socket, server_ip, server_port)) {
+    if (!udp_socket__create(&udp_socket, server_port)) {
         return 0;
     }
 

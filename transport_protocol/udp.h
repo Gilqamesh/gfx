@@ -18,8 +18,7 @@ struct network_addr {
     uint32_t port;
 };
 
-//! @param in_ip if NULL, listens on any incoming connection
-bool udp_socket__create(udp_socket_t* self, const char* in_ip, uint16_t in_port);
+bool udp_socket__create(udp_socket_t* self, uint16_t port);
 
 // bool udp_socket__create(udp_socket_t* self);
 void udp_socket__destroy(udp_socket_t* self);
