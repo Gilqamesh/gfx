@@ -15,7 +15,7 @@ typedef struct loop_stage {
 } loop_stage_t;
 
 struct game_client {
-    network_id_t  network_id;
+    udp_socket_t  udp_socket;
     game_t        game_state;
 
     uint32_t      current_frame;
@@ -55,7 +55,9 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
 
     int64_t seconds_since_loop_start = (int64_t) game_client->previous_frame_info.time_end;
     static int64_t seconds_last_info_printed;
-    if (seconds_since_loop_start > seconds_last_info_printed) {
+    (void) seconds_last_info_printed;
+    // if (seconds_since_loop_start > seconds_last_info_printed) {
+    if (0) {
         seconds_last_info_printed = seconds_since_loop_start;
         double time_frame_actual_avg    = 0.0;
         double time_frame_expected_avg  = 0.0;
@@ -109,12 +111,10 @@ static bool loop_stage__poll_inputs(loop_stage_t* self, game_client_t game_clien
     (void) game_client;
 
     const char* msg = "hello from client";
-    network_id__send_data(game_client->network_id, msg, strlen(msg));
+    udp_socket__send_data(&game_client->udp_socket, msg, strlen(msg));
 
     char packet[256] = { 0 };
-    uint32_t received_data_len = 0;
-    network_info_t sender_network_info;
-    if (network_id__get_data(game_client->network_id, packet, ARRAY_SIZE(packet), &received_data_len, &sender_network_info)) {
+    if (udp_socket__get_data(&game_client->udp_socket, packet, ARRAY_SIZE(packet), 0, 0)) {
         debug__write_and_flush(
             DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
             "received data from server: %s", packet

@@ -1,6 +1,6 @@
 #include "game_server.h"
 
-#include "udp_protocol.h"
+#include "udp.h"
 #include "system.h"
 #include "helper_macros.h"
 #include "debug.h"
@@ -13,8 +13,8 @@
 #include "game_server_impl.c"
 
 game_server_t game_server__create(uint16_t port) {
-    network_id_t network_id = network_id__create_server(port);
-    if (!network_id) {
+    udp_socket_t udp_socket;
+    if (!udp_socket__create(&udp_socket, 0, port)) {
         return 0;
     }
 
@@ -26,8 +26,8 @@ game_server_t game_server__create(uint16_t port) {
         return 0;
     }
 
-    result->network_id = network_id;
-    
+    result->udp_socket = udp_socket;
+
     result->frame_info_sample_size = 128;
     result->frame_info_sample = malloc(result->frame_info_sample_size * sizeof(*result->frame_info_sample));
 
@@ -40,7 +40,7 @@ game_server_t game_server__create(uint16_t port) {
 }
 
 void game_server__destroy(game_server_t self) {
-    network_id__destroy(self->network_id);
+    udp_socket__destroy(&self->udp_socket);
 
     free(self);
 }

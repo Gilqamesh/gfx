@@ -181,10 +181,10 @@ static void supported_module__init_game_client_module(supported_module_t* self) 
 }
 
 static void supported_module__init_transport_protocol_module(supported_module_t* self) {
-    module_file_t udp_tp_file = module__add_file(self->module, "udp_protocol.c");
+    module_file_t udp_file = module__add_file(self->module, "udp.c");
 
-    module_file__add_common_cflags(udp_tp_file);
-    module_file__add_debug_cflags(udp_tp_file);
+    module_file__add_common_cflags(udp_file);
+    module_file__add_debug_cflags(udp_file);
 }
 
 static void supported_module__init_system_module(supported_module_t* self) {

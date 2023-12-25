@@ -8,7 +8,9 @@ int main() {
     }
 
     const uint32_t game_server_port = 3200;
-    const char* game_server_ip = "127.0.0.1";
+    // const char* game_server_ip = "127.0.0.1";
+    const char* game_server_ip = "192.168.0.186";
+    // const char* game_server_ip = "172.28.221.172";
     game_client_t game_client = game_client__create(game_server_ip, game_server_port);
     if (!game_client) {
         return 2;

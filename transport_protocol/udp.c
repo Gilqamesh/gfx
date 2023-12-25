@@ -1,4 +1,4 @@
-#include "udp_protocol.h"
+#include "udp.h"
 
 #include <stdio.h>
 
@@ -12,61 +12,53 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-struct network_id {
-    int32_t socket;
-};
+bool udp_socket__create(udp_socket_t* self, const char* in_ip, uint16_t in_port) {
+    struct sockaddr_in src_addr;
+    if (in_ip) {
+        in_addr_t dst_in_addr = inet_addr(in_ip);
+        if (dst_in_addr == INADDR_NONE) {
+            return false;
+        }
+        src_addr.sin_addr.s_addr = dst_in_addr;
+    } else {
+        src_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    }
+    src_addr.sin_family = AF_INET;
+    src_addr.sin_port = htons(in_port);
 
-network_id_t network_id__create_server(uint16_t port) {
     int32_t socket_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
     if (socket_fd == -1) {
         perror(0);
-        return 0;
+        return false;
     }
-
-    struct sockaddr_in src_addr;
-    src_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    src_addr.sin_family = AF_INET;
-    src_addr.sin_port = htons(port);
 
     if (bind(socket_fd, (const struct sockaddr*) &src_addr, sizeof(src_addr)) == -1) {
         perror(0);
-        return 0;
+        return false;
     }
 
-    network_id_t result = calloc(1, sizeof(*result));
-    if (!result) {
-        perror(0);
-        return 0;
-    }
+    self->socket = socket_fd;
 
-    result->socket = socket_fd;
-
-    return result;
+    return true;
 }
 
-network_id_t network_id__create() {
-    int32_t socket_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
-    if (socket_fd == -1) {
-        perror(0);
-        return 0;
-    }
+// bool udp_socket__create(udp_socket_t* self) {
+//     int32_t socket_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+//     if (socket_fd == -1) {
+//         perror(0);
+//         return false;
+//     }
 
-    network_id_t result = calloc(1, sizeof(*result));
-    if (!result) {
-        perror(0);
-        return 0;
-    }
+//     self->socket = socket_fd;
 
-    result->socket = socket_fd;
+//     return true;
+// }
 
-    return result;
-}
-
-void network_id__destroy(network_id_t self) {
+void udp_socket__destroy(udp_socket_t* self) {
     close(self->socket);
 }
 
-bool network__connect(network_id_t self, const char* ip, uint16_t port) {
+bool udp_socket__connect(udp_socket_t* self, const char* ip, uint16_t port) {
     in_addr_t dst_in_addr = inet_addr(ip);
     if (dst_in_addr == INADDR_NONE) {
         return false;
@@ -84,7 +76,7 @@ bool network__connect(network_id_t self, const char* ip, uint16_t port) {
     return true;
 }
 
-bool network_id__send_data(network_id_t self, const void* data, uint32_t data_size) {
+bool udp_socket__send_data(udp_socket_t* self, const void* data, uint32_t data_size) {
     if (send(self->socket, data, data_size, MSG_DONTWAIT) == -1) {
         return false;
     }
@@ -92,7 +84,7 @@ bool network_id__send_data(network_id_t self, const void* data, uint32_t data_si
     return true;
 }
 
-bool network_id__send_data_to(network_id_t self, const void* data, uint32_t data_size, const network_info_t* dst_info) {
+bool udp_socket__send_data_to(udp_socket_t* self, const void* data, uint32_t data_size, const network_addr_t* dst_info) {
     struct sockaddr_in dst_addr = { 0 };
     dst_addr.sin_addr.s_addr = dst_info->addr;
     dst_addr.sin_family = AF_INET;
@@ -104,8 +96,7 @@ bool network_id__send_data_to(network_id_t self, const void* data, uint32_t data
     return true;
 }
 
-// bool network_id__get_data(network_id_t self, void* out_buffer, uint32_t out_buffer_size, uint32_t* out_message_len, const char* out_ip, uint16_t out_port) {
-bool network_id__get_data(network_id_t self, void* out_data, uint32_t out_data_size, uint32_t* out_data_len, network_info_t* out_sender_info) {
+bool udp_socket__get_data(udp_socket_t* self, void* out_data, uint32_t out_data_size, uint32_t* out_data_len, network_addr_t* out_sender_info) {
     struct sockaddr src_addr;
     socklen_t src_addr_len_original = sizeof(src_addr);
     socklen_t src_addr_len = src_addr_len_original;

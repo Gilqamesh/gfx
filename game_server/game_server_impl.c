@@ -1,4 +1,11 @@
-typedef struct frame_info {
+struct         loop_stage;
+struct         frame_info;
+struct         network_packet;
+typedef struct frame_info     frame_info_t;
+typedef struct loop_stage     loop_stage_t;
+typedef struct network_packet network_packet_t;
+
+struct frame_info {
     double   elapsed_time;
     double   time_update_actual;
     double   time_render_actual;
@@ -6,16 +13,21 @@ typedef struct frame_info {
     double   time_end;
     double   time_frame_expected;
     uint32_t number_of_updates;
-} frame_info_t;
+};
 
-typedef struct loop_stage {
+struct loop_stage {
     double   time_start;
     double   time_elapsed;
     bool     (*loop_stage__execute)(struct loop_stage* self, game_server_t game_server);
-} loop_stage_t;
+};
+
+struct network_packet {
+    uint32_t id;
+    // application stuff
+};
 
 struct game_server {
-    network_id_t  network_id;
+    udp_socket_t  udp_socket;
     game_t        game_state;
 
     uint32_t      current_frame;
@@ -55,7 +67,9 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
 
     int64_t seconds_since_loop_start = (int64_t) game_server->previous_frame_info.time_end;
     static int64_t seconds_last_info_printed;
-    if (seconds_since_loop_start > seconds_last_info_printed) {
+    (void) seconds_last_info_printed;
+    // if (seconds_since_loop_start > seconds_last_info_printed) {
+    if (0) {
         seconds_last_info_printed = seconds_since_loop_start;
         double time_frame_actual_avg    = 0.0;
         double time_frame_expected_avg  = 0.0;
@@ -110,15 +124,15 @@ static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_serve
 
     char packet[256] = { 0 };
     uint32_t received_data_len = 0;
-    network_info_t sender_network_info;
-    if (network_id__get_data(game_server->network_id, packet, ARRAY_SIZE(packet), &received_data_len, &sender_network_info)) {
+    network_addr_t sender_addr;
+    if (udp_socket__get_data(&game_server->udp_socket, packet, ARRAY_SIZE(packet), &received_data_len, &sender_addr)) {
         debug__write_and_flush(
             DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
             "received data from client: %s", packet
         );
 
         const char* msg = "hello from server, this is an ack that I have received your packet";
-        network_id__send_data_to(game_server->network_id, msg, strlen(msg), &sender_network_info);
+        udp_socket__send_data_to(&game_server->udp_socket, msg, strlen(msg), &sender_addr);
     }
 
     // todo: poll inputs
