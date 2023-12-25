@@ -1,4 +1,9 @@
-typedef struct frame_info {
+struct         loop_stage;
+struct         frame_info;
+typedef struct loop_stage loop_stage_t;
+typedef struct frame_info frame_info_t;
+
+struct frame_info {
     double   elapsed_time;
     double   time_update_actual;
     double   time_render_actual;
@@ -6,16 +11,19 @@ typedef struct frame_info {
     double   time_end;
     double   time_frame_expected;
     uint32_t number_of_updates;
-} frame_info_t;
+};
 
-typedef struct loop_stage {
+struct loop_stage {
     double   time_start;
     double   time_elapsed;
     bool     (*loop_stage__execute)(struct loop_stage* self, game_client_t game_client);
-} loop_stage_t;
+};
 
 struct game_client {
     udp_socket_t  udp_socket;
+
+    uint32_t      sequence_id;
+
     game_t        game_state;
 
     uint32_t      current_frame;
@@ -110,16 +118,20 @@ static bool loop_stage__poll_inputs(loop_stage_t* self, game_client_t game_clien
     (void) self;
     (void) game_client;
 
-    const char* msg = "hello from client";
-    udp_socket__send_data(&game_client->udp_socket, msg, strlen(msg));
+    packet_t packet = {
+        .sequence_id = game_client->sequence_id
+    };
+    udp_socket__send_data(&game_client->udp_socket, &packet, sizeof(packet));
 
-    char packet[256] = { 0 };
-    if (udp_socket__get_data(&game_client->udp_socket, packet, ARRAY_SIZE(packet), 0, 0)) {
+    char msg[256] = { 0 };
+    if (udp_socket__get_data(&game_client->udp_socket, msg, ARRAY_SIZE(msg), 0, 0)) {
         debug__write_and_flush(
             DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
-            "received data from server: %s", packet
+            "server: %s", msg
         );
     }
+
+    ++game_client->sequence_id;
 
     // todo: poll inputs
     // note: a client can manipulate the server such as shut it down, restart, etc.?

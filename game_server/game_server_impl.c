@@ -21,14 +21,19 @@ struct loop_stage {
     bool     (*loop_stage__execute)(struct loop_stage* self, game_server_t game_server);
 };
 
-struct network_packet {
-    uint32_t id;
-    // application stuff
-};
+typedef struct client {
+    bool           connected;
+    network_addr_t addr;
+    uint32_t       sequence_id;
+} client_t;
 
 struct game_server {
-    udp_socket_t  udp_socket;
-    game_t        game_state;
+    udp_socket_t   udp_socket;
+
+    uint32_t       sequence_id;
+    client_t       client;
+
+    game_t         game_state;
 
     uint32_t      current_frame;
     double        time_lost;
@@ -120,20 +125,64 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
 
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_server) {
     (void) self;
-    (void) game_server;
 
-    char packet[256] = { 0 };
+    packet_t packet;
     uint32_t received_data_len = 0;
     network_addr_t sender_addr;
-    if (udp_socket__get_data(&game_server->udp_socket, packet, ARRAY_SIZE(packet), &received_data_len, &sender_addr)) {
-        debug__write_and_flush(
-            DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-            "received data from client: %s", packet
-        );
-
-        const char* msg = "hello from server, this is an ack that I have received your packet";
-        udp_socket__send_data_to(&game_server->udp_socket, msg, strlen(msg), &sender_addr);
+    if (udp_socket__get_data(&game_server->udp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
+        if (received_data_len == sizeof(packet)) {
+            if (game_server->client.connected) {
+                if (
+                    sender_addr.addr == game_server->client.addr.addr &&
+                    sender_addr.port == game_server->client.addr.port
+                ) {
+                    // received packet is from client
+                    debug__write_and_flush(
+                        DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                        "received packet from client, remote seq id: %u, local seq id: %u",
+                        packet.sequence_id, game_server->sequence_id
+                    );
+                    // update their connection
+                    game_server->client.sequence_id = packet.sequence_id;
+                } else {
+                    // packet is not from client -> discard packet
+                    debug__write_and_flush(
+                        DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                        "discarded packet as it is not from the connected client, received from: <todo with inet_ntop>"
+                    );
+                }
+            } else {
+                // accept new connection
+                game_server->client.connected = true;
+                game_server->client.addr.addr = sender_addr.addr;
+                game_server->client.addr.port = sender_addr.port;
+                game_server->client.sequence_id = packet.sequence_id;
+                char msg[128] = { 0 };
+                snprintf(msg, ARRAY_SIZE(msg), "Welcome to the server!\n");
+                udp_socket__send_data_to(&game_server->udp_socket, msg, strlen(msg), &sender_addr);
+            }
+        }
     }
+
+    if (game_server->client.connected) {
+        // disconnect client that hasn't sent packets in a long time
+        const uint32_t max_sequence_id_diff = 128;
+        uint32_t sequence_id_diff = 0;
+        if (game_server->sequence_id > game_server->client.sequence_id) {
+            sequence_id_diff = game_server->sequence_id - game_server->client.sequence_id;
+        } else {
+            // our sequence_id wrapper around, but client's hasn't yet
+            sequence_id_diff = game_server->client.sequence_id - game_server->sequence_id;
+        }
+        if (sequence_id_diff >= max_sequence_id_diff) {
+            game_server->client.connected = false;
+            char msg[128] = { 0 };
+            snprintf(msg, ARRAY_SIZE(msg), "Sorry you were away for too long. :(\n");
+            udp_socket__send_data_to(&game_server->udp_socket, msg, strlen(msg), &sender_addr);
+        }
+    }
+
+    ++game_server->sequence_id;
 
     // todo: poll inputs
     // note: a client can manipulate the server such as shut it down, restart, etc.?

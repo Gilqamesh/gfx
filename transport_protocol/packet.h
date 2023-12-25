@@ -1,7 +1,18 @@
-#ifndef UDP_PACKET_H
-# define UDP_PACKET_H
+#ifndef PACKET_H
+# define PACKET_H
 
-struct         network_packet;
-typedef struct network_packet network_packet_t;
+struct         packet;
+struct         game_data;
+typedef struct packet    packet_t;
+typedef struct game_data game_data_t;
 
-#endif // UDP_PACKET_H
+struct game_data {
+    uint32_t buttons;
+};
+
+struct packet {
+    uint32_t    sequence_id;
+    game_data_t game_data;
+};
+
+#endif // PACKET_H

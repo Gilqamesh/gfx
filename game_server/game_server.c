@@ -5,16 +5,18 @@
 #include "helper_macros.h"
 #include "debug.h"
 #include "game.h"
+#include "packet.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "game_server_impl.c"
 
 game_server_t game_server__create(uint16_t port) {
     udp_socket_t udp_socket;
-    if (!udp_socket__create(&udp_socket, 0, port)) {
+    if (!udp_socket__create(&udp_socket, port)) {
         return 0;
     }
 

@@ -5,6 +5,7 @@
 #include "helper_macros.h"
 #include "debug.h"
 #include "game.h"
+#include "packet.h"
 
 #include <stdlib.h>
 #include <stdbool.h>

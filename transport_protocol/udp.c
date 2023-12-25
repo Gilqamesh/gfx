@@ -104,8 +104,6 @@ bool udp_socket__get_data(udp_socket_t* self, void* out_data, uint32_t out_data_
         return false;
     }
 
-    assert(message_len < out_data_size);
-
     if (out_data_len) {
         *out_data_len = message_len;
     }
