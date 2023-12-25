@@ -182,7 +182,7 @@ static void game_server__receive_packets(game_server_t self) {
             self->client.connected = false;
             debug__write_and_flush(
                 DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-                "client dconnected from the server: %u:%u",
+                "client disconnected from the server: %u:%u",
                 self->client.addr.addr, self->client.addr.port
             );
         }

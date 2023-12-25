@@ -131,6 +131,8 @@ static void game_client__receive_packet(game_client_t self) {
                     "received packet from server, remote seq id: %u, local seq id: %u",
                     packet.sequence_id, self->sequence_id
                 );
+                // update local sequence id to the server
+                self->sequence_id = packet.sequence_id;
             } else {
                 // packet is not from server -> discard packet
                 debug__write_and_flush(
