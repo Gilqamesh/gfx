@@ -215,7 +215,7 @@ static void game_server__connection__accept(
     connection->addr           = sender_addr;
     connection->time_last_sent = time;
     connection->sequence_id    = packet->sequence_id;
-    connection->ack_bitfield   = 0;
+    connection->ack_bitfield   = -1;
     connection->time_connected = time;
     connection->connected      = true;
 
