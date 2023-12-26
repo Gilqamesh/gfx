@@ -77,11 +77,17 @@ static bool game_client__load_images(game_client_t self);
 static void game_client__sample_prev_frame(game_client_t self);
 static void game_client__push_stage(game_client_t self, bool (*stage_fn)(struct loop_stage* self, game_client_t game_client));
 static void game_client__ack_packet(game_client_t self, packet_t* packet, double time);
+static void game_client__connection_accept(
+    game_client_t self, connection_t* connection, network_addr_t sender_addr,
+    packet_t* packet, double time
+);
 static void game_client__accept_packet(game_client_t self, connection_t* connection, packet_t* packet, double time);
 static void game_client__receive_packets(game_client_t self, double time);
 static void game_client__send_packet(game_client_t self, double time);
 
 static bool sent_packet__is_acked(sent_packet_t* self);
+
+static void connection__check_for_lost_packets(connection_t* connection, uint32_t left_shift);
 
 static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_client_t game_client) {
     game_client->previous_frame_info.time_start         = game_client->previous_frame_info.time_end;
@@ -237,35 +243,63 @@ static void game_client__ack_packet(game_client_t self, packet_t* packet, double
                 const double percentage_to_move = 0.1;
                 self->time_round_trip = (1.0 - percentage_to_move) * self->time_round_trip + percentage_to_move * time_round_trip;
             }
-            debug__write("rtt: %lfms", self->time_round_trip * 1000.0);
+            // debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET, "RTT: %lfms", self->time_round_trip * 1000.0);
 
             // todo: discard packet
             // if (time_round_trip > 1.0) {
             //     // discard packet
             // }
-            debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO);
             // ASSERT(time_round_trip >= 0.0);
         }
     }
 }
 
+static void game_client__connection_accept(
+    game_client_t self, connection_t* connection, network_addr_t sender_addr,
+    packet_t* packet, double time
+) {
+    (void) self;
+
+    if (!connection->connected) {
+        connection->addr           = sender_addr;
+        connection->time_last_sent = time;
+        connection->sequence_id    = packet->sequence_id;
+        connection->ack_bitfield   = 0;
+        connection->time_connected = time;
+        connection->connected      = true;
+
+        debug__write("client connected to the server: %u:%u", sender_addr.addr, sender_addr.port);
+        debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET);
+    }
+}
+
 static void game_client__accept_packet(game_client_t self, connection_t* connection, packet_t* packet, double time) {
     connection->time_last_sent = time;
+
     if (sequence_id__is_more_recent(packet->sequence_id, connection->sequence_id)) {
         const uint32_t connection_seq_id_delta = sequence_id__delta(packet->sequence_id, connection->sequence_id);
-        if (connection_seq_id_delta <= (sizeof(connection->ack_bitfield_queue) << 3)) {
+        connection__check_for_lost_packets(connection, connection_seq_id_delta);
+        uint32_t new_ack_bitfield = 0;
+        if (connection_seq_id_delta <= (sizeof(connection->ack_bitfield) << 3)) {
             ASSERT(connection_seq_id_delta > 0);
-            const uint32_t shift_by = connection_seq_id_delta - 1;
-            connection->ack_bitfield_queue <<= shift_by;
-            connection->ack_bitfield_queue |= 1;
+            new_ack_bitfield |= (connection->ack_bitfield << connection_seq_id_delta);
+            new_ack_bitfield |= (1 << (connection_seq_id_delta - 1));
         }
 
+        connection->ack_bitfield = new_ack_bitfield;
         connection->sequence_id = packet->sequence_id;
+    } else if (connection->sequence_id != packet->sequence_id) {
+        const uint32_t connection_seq_id_delta = sequence_id__delta(connection->sequence_id, packet->sequence_id);
+        if (connection_seq_id_delta <= (sizeof(connection->ack_bitfield) << 3)) {
+            connection->ack_bitfield |= (1 << (connection_seq_id_delta - 1));
+        }
     }
 
     game_client__ack_packet(self, packet, time);
 
-    debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "recv packet: "PACKET_FORMAT, packet->sequence_id, packet->ack);
+    debug__write_raw("RECV PACKET: ");
+    debug__write_packet_raw(packet);
+    debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET);
 }
 
 static void game_client__receive_packets(game_client_t self, double time) {
@@ -276,17 +310,18 @@ static void game_client__receive_packets(game_client_t self, double time) {
     while (tp_socket__get_data(&self->tp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
         if (received_data_len == sizeof(packet)) {
             if (network_addr__is_same(&sender_addr, &self->connection.addr)) {
+                game_client__connection_accept(self, &self->connection, sender_addr, &packet, time);
                 game_client__accept_packet(self, &self->connection, &packet, time);
             } else {
                 // packet is not from server -> discard packet
                 debug__write_and_flush(
-                    DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
+                    DEBUG_MODULE_GAME_CLIENT, DEBUG_NET,
                     "discarded packet as it is not from the server, received from: <todo with inet_ntop>"
                 );
             }
         } else {
             debug__write_and_flush(
-                DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
+                DEBUG_MODULE_GAME_CLIENT, DEBUG_NET,
                 "unknown packet size received: %u, expected: %u",
                 received_data_len, sizeof(packet)
             );
@@ -294,39 +329,15 @@ static void game_client__receive_packets(game_client_t self, double time) {
     }
 }
 
-static void game_client__debug_packet(packet_t* packet) {
-    debug__write("packet:");
-    debug__write("seq:  %u", packet->sequence_id);
-    debug__write("ack:  %u", packet->ack);
-    debug__write_raw("ackb: ");
-    for (uint32_t bit_index = 0; bit_index < (sizeof(packet->ack_bitfield) << 3); ++bit_index) {
-        uint32_t bit = (packet->ack_bitfield & (1 << bit_index)) >> bit_index;
-        debug__write_raw("%c", bit ? '1' : '0');
-        if (bit_index > 0 && bit_index % 8 == 0) {
-            debug__write_raw(" ");
-        }
-    }
-    debug__write_raw("\n");
-    debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO);
-}
-
 static void game_client__send_packet(game_client_t self, double time) {
     packet_t packet = {
         .sequence_id = self->sequence_id,
         .ack = self->connection.sequence_id,
-        .ack_bitfield = self->connection.ack_bitfield_queue
+        .ack_bitfield = self->connection.ack_bitfield
     };
 
     ASSERT(self->sent_packets_queue_head < self->frame_info_sample_size);
     sent_packet_t* sent_packet = &self->sent_packets_queue[self->sent_packets_queue_head++];
-
-    if (
-        sent_packet->time > 0.0 &&
-        time - sent_packet->time > self->config.max_time_after_packet_is_lost
-    ) {
-        debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "lost packet: %u", sent_packet->sequence_id);
-    }
-
     sent_packet->sequence_id = packet.sequence_id;
     sent_packet->time = time;
 
@@ -342,12 +353,35 @@ static void game_client__send_packet(game_client_t self, double time) {
 
     tp_socket__send_data(&self->tp_socket, &packet, sizeof(packet));
 
-    game_client__debug_packet(&packet);
-    // debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "sent packet: "PACKET_FORMAT, packet.sequence_id, packet.ack);
+    debug__write_raw("SENT PACKET: ");
+    debug__write_packet_raw(&packet);
+    debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET);
 
     ++self->sequence_id;
 }
 
 static bool sent_packet__is_acked(sent_packet_t* self) {
     return self->time == 0.0;
+}
+
+static void connection__check_for_lost_packets(connection_t* connection, uint32_t left_shift) {
+    // todo: early exit if connection hasn't been alive for long enough to determine if packets have been lost
+
+    if (connection->ack_bitfield != 0) {
+        uint32_t bit_index_end = 0;
+        if (left_shift > (sizeof(connection->ack_bitfield) << 3)) {
+            bit_index_end = sizeof(connection->ack_bitfield) << 3;
+            debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET, "LOST PACKET: %u", connection->sequence_id);
+        } else {
+            bit_index_end = left_shift;
+        }
+
+        for (uint32_t bit_index = 0; bit_index < bit_index_end; ++bit_index) {
+            const uint32_t bit_mask_index = ((sizeof(connection->ack_bitfield) << 3) - 1 - bit_index);
+            const uint32_t bit_mask = 1 << bit_mask_index;
+            if ((connection->ack_bitfield & bit_mask) == 0) {
+                debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET, "LOST PACKET: %u", sequence_id__sub(connection->sequence_id, bit_mask_index + 1));
+            }
+        }
+    }
 }

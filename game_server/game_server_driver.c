@@ -17,7 +17,7 @@ int main() {
         return 2;
     }
 
-    const double target_fps = 20;
+    const double target_fps = 3;
     game_server__run(game_server, target_fps);
 
     game_server__destroy(game_server);

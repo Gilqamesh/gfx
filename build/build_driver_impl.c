@@ -149,6 +149,7 @@ static void supported_module__init_debug_module(supported_module_t* self) {
     module_file__add_common_cflags(debug_file);
     module_file__add_debug_cflags(debug_file);
 
+    module__add_supported_dependency(self->module, TP_MODULE);
     module__add_supported_dependency(self->module, COMMON_MODULE);
 }
 

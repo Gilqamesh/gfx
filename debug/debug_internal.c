@@ -19,6 +19,7 @@ static const char* debug_message_type__to_str(debug_message_type_t message_type)
     case DEBUG_ERROR: return "error";
     case DEBUG_WARN:  return "warn";
     case DEBUG_INFO:  return "info";
+    case DEBUG_NET:   return "net";
     default: ASSERT(false);
     }
 

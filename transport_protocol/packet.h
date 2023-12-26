@@ -17,7 +17,6 @@ struct game_data {
     uint32_t buttons;
 };
 
-#define PACKET_FORMAT "[seq: %-5u ack: %-5u]"
 struct packet {
     seq_id_t    sequence_id;
     seq_id_t    ack;
@@ -33,7 +32,8 @@ struct connection {
     network_addr_t addr;
     double         time_last_sent;
     seq_id_t       sequence_id;
-    uint32_t       ack_bitfield_queue;
+    uint32_t       ack_bitfield;
+    double         time_connected;
     bool           connected;
 };
 
@@ -49,6 +49,10 @@ static inline bool sequence_id__is_more_recent(seq_id_t seq_id_1, seq_id_t seq_i
 */
 static inline seq_id_t sequence_id__delta(seq_id_t newer_seq_id, seq_id_t older_seq_id) {
     return newer_seq_id - older_seq_id;
+}
+
+static inline seq_id_t sequence_id__sub(seq_id_t seq_id_1, uint32_t val) {
+    return (seq_id_t) (seq_id_1 - val);
 }
 
 #endif // PACKET_H

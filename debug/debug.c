@@ -33,7 +33,7 @@ bool debug__init_module() {
     return true;
 }
 
-void debug__deinit_module() {    
+void debug__deinit_module() {
     if (debug.error_file) {
         fclose(debug.error_file);
         debug.error_file = 0;
@@ -42,6 +42,18 @@ void debug__deinit_module() {
     if (debug.str_builder.start) {
         free(debug.str_builder.start);
     }
+}
+
+void debug__write_packet_raw(packet_t* packet) {
+    debug__write_raw("%-10u%-10u", packet->sequence_id, packet->ack);
+    for (int32_t bit_index = (sizeof(packet->ack_bitfield) << 3) - 1; bit_index >= 0; --bit_index) {
+        uint32_t bit = (packet->ack_bitfield & (1 << bit_index)) >> bit_index;
+        debug__write_raw("%c", bit ? '1' : '0');
+        if (bit_index > 0 && bit_index % 8 == 0) {
+            debug__write_raw(" ");
+        }
+    }
+    debug__write_raw("\n");
 }
 
 void debug__write_raw(const char* format, ...) {

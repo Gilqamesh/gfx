@@ -3,15 +3,11 @@
 #include <math.h>
 #include <assert.h>
 
-int32_t mod(int32_t a, int32_t b) {
-    assert(b > 0);
-    return (a % b + b) % b;
-}
-
 int main() {
-    // (a % b)
-    int32_t remainder = mod(-1, 90);
-    printf("%d\n", remainder);
+    uint8_t a = 12;
+    uint32_t b = 32;
+    uint8_t res = (uint8_t) (a - b);
+    printf("%u\n", res);
 
     return 0;
 }

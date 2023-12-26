@@ -23,7 +23,7 @@ int main() {
         return 2;
     }
 
-    const double target_fps = 100.0;
+    const double target_fps = 10.0;
     game_client__run(game_client, target_fps);
 
     game_client__destroy(game_client);
