@@ -21,17 +21,16 @@ struct loop_stage {
     bool     (*loop_stage__execute)(struct loop_stage* self, game_server_t game_server);
 };
 
-typedef struct client {
-    bool           connected;
-    network_addr_t addr;
-    uint32_t       sequence_id;
-} client_t;
-
 struct game_server {
-    udp_socket_t   udp_socket;
+    game_server_config_t config;
+    tp_socket_t          tp_socket;
 
-    uint32_t       sequence_id;
-    client_t       client;
+    seq_id_t             sequence_id;
+
+    // todo: better lookup into connections based on network addr
+    uint32_t       connections_size;
+    uint32_t       connections_fill;
+    connection_t*  connections;
 
     game_t         game_state;
 
@@ -54,8 +53,17 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_server);
 static bool loop_stage__update_loop(loop_stage_t* self, game_server_t game_server);
 static bool loop_stage__sleep_till_end_of_frame(loop_stage_t* self, game_server_t game_server);
+
 static void game_server__sample_prev_frame(game_server_t self);
 static void game_server__push_stage(game_server_t self, bool (*stage_fn)(struct loop_stage* self, game_server_t game_server));
+static void game_server__receive_packets(game_server_t self, double time);
+static void game_server__send_packets(game_server_t self);
+static void game_server__disconnect_connection(game_server_t self, connection_t* connection);
+static void game_server__connection__accept(
+    game_server_t self, connection_t* connection, network_addr_t sender_addr,
+    packet_t* packet, double time
+);
+static void game_server__accept_packet(game_server_t self, connection_t* connection, packet_t* packet, double time);
 
 static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_server_t game_server) {
     game_server->previous_frame_info.time_start         = game_server->previous_frame_info.time_end;
@@ -123,92 +131,11 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
     return true;
 }
 
-static void game_server__receive_packets(game_server_t self) {
-    packet_t packet;
-    uint32_t received_data_len = 0;
-    network_addr_t sender_addr;
-    if (udp_socket__get_data(&self->udp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
-        if (received_data_len == sizeof(packet)) {
-            if (self->client.connected) {
-                if (
-                    sender_addr.addr == self->client.addr.addr &&
-                    sender_addr.port == self->client.addr.port
-                ) {
-                    // received packet is from client
-                    debug__write_and_flush(
-                        DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-                        "received packet from client, remote seq id: %u, local seq id: %u",
-                        packet.sequence_id, self->sequence_id
-                    );
-                } else {
-                    // packet is not from client -> discard packet
-                    debug__write_and_flush(
-                        DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-                        "discarded packet as it is not from the connected client, received from: <todo with inet_ntop>"
-                    );
-                }
-            } else {
-                // accept new connection
-                self->client.connected = true;
-                self->client.addr.addr = sender_addr.addr;
-                self->client.addr.port = sender_addr.port;
-                self->client.sequence_id = packet.sequence_id;
-                debug__write_and_flush(
-                    DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-                    "client connected to the server: %u:%u",
-                    sender_addr.addr, sender_addr.port
-                );
-            }
-        } else {
-            debug__write_and_flush(
-                DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-                "unknown packet size received: %u, expected: %u",
-                received_data_len, sizeof(packet)
-            );
-        }
-    }
-
-    if (self->client.connected) {
-        // disconnect client that hasn't sent packets in a long time
-        const uint32_t max_sequence_id_diff = 128;
-        uint32_t sequence_id_diff = 0;
-        if (self->sequence_id > self->client.sequence_id) {
-            sequence_id_diff = self->sequence_id - self->client.sequence_id;
-        } else {
-            // our sequence_id wrapper around, but client's hasn't yet
-            sequence_id_diff = self->client.sequence_id - self->sequence_id;
-        }
-        if (sequence_id_diff >= max_sequence_id_diff) {
-            self->client.connected = false;
-            debug__write(
-                "client disconnected from the server: %u:%u",
-                self->client.addr.addr, self->client.addr.port
-            );
-            debug__write(
-                "last known packet from them: %u, local sequence id: %u",
-                self->client.sequence_id, self->sequence_id
-            );
-            debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
-        }
-    }
-}
-
-static void game_server__send_packets(game_server_t self) {
-    if (self->client.connected) {
-        packet_t packet = {
-            .sequence_id = self->sequence_id
-        };
-        udp_socket__send_data_to(&self->udp_socket, &packet, sizeof(packet), self->client.addr);
-    }
-}
-
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_server_t game_server) {
     (void) self;
 
-    game_server__receive_packets(game_server);
+    game_server__receive_packets(game_server, self->time_start);
     game_server__send_packets(game_server);
-
-    ++game_server->sequence_id;
 
     return true;
 }
@@ -263,4 +190,113 @@ static void game_server__push_stage(game_server_t self, bool (*stage_fn)(struct 
     ARRAY_ENSURE_TOP(self->loop_stages, self->loop_stages_top, self->loop_stages_size);
     self->loop_stages[self->loop_stages_top].loop_stage__execute = stage_fn;
     ++self->loop_stages_top;
+}
+
+static void game_server__disconnect_connection(game_server_t self, connection_t* connection) {
+    ASSERT(self->connections_fill > 0);
+    --self->connections_fill;
+
+    connection->connected = false;
+    debug__write(
+        "client disconnected from the server: %u:%u",
+        connection->addr.addr, connection->addr.port
+    );
+    debug__write(
+        "last known packet from them: %u, local sequence id: %u",
+        connection->sequence_id, self->sequence_id
+    );
+    debug__write(
+        "available connections: %u",
+        self->connections_size - self->connections_fill
+    );
+    debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
+}
+
+static void game_server__connection__accept(
+    game_server_t self, connection_t* connection, network_addr_t sender_addr,
+    packet_t* packet, double time
+) {
+    ASSERT(self->connections_fill < self->connections_size);
+    ++self->connections_fill;
+
+    connection->connected = true;
+    connection->addr = sender_addr;
+    connection->sequence_id = packet->sequence_id;
+    connection->time_last_sent = time;
+
+    debug__write("client connected to the server: %u:%u", sender_addr.addr, sender_addr.port);
+    debug__write("available connections left: %u", self->connections_size - self->connections_fill);
+    debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
+}
+
+static void game_server__accept_packet(game_server_t self, connection_t* connection, packet_t* packet, double time) {
+    (void) self;
+    
+    connection->time_last_sent = time;
+    if (sequence_id__is_more_recent(packet->sequence_id, connection->sequence_id)) {
+        connection->sequence_id = packet->sequence_id;
+    }
+
+    debug__write_and_flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO, "recv packet: "PACKET_FORMAT, packet->sequence_id, packet->ack);
+}
+
+static void game_server__receive_packets(game_server_t self, double time) {
+    packet_t packet;
+    uint32_t received_data_len = 0;
+    network_addr_t sender_addr;
+    // todo: process a limited amount
+    while (tp_socket__get_data(&self->tp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
+        if (received_data_len == sizeof(packet)) {
+            bool package_accepted = false;
+            connection_t* free_connection = 0;
+            for (uint32_t connection_index = 0; connection_index < self->connections_size; ++connection_index) {
+                connection_t* connection = &self->connections[connection_index];
+                if (connection->connected) {
+                    if (network_addr__is_same(&sender_addr, &connection->addr)) {
+                        game_server__accept_packet(self, connection, &packet, time);
+                        package_accepted = true;
+                        break ;
+                    }
+                } else {
+                    free_connection = connection;
+                }
+            }
+
+            if (!package_accepted && free_connection) {
+                game_server__connection__accept(self, free_connection, sender_addr, &packet, time);
+            }
+        } else {
+            debug__write_and_flush(
+                DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
+                "unknown packet size received: %u, expected: %u",
+                received_data_len, sizeof(packet)
+            );
+        }
+
+        // system__usleep(2000);
+    }
+
+    for (uint32_t connection_index = 0; connection_index < self->connections_size; ++connection_index) {
+        connection_t* connection = &self->connections[connection_index];
+        if (connection->connected) {
+            if (connection->time_last_sent + self->config.max_time_for_disconnect < time) {
+                game_server__disconnect_connection(self, connection);
+            }
+        }
+    }
+}
+
+static void game_server__send_packets(game_server_t self) {
+    for (uint32_t connection_index = 0; connection_index < self->connections_size; ++connection_index) {
+        connection_t* connection = &self->connections[connection_index];
+        if (connection->connected) {
+            packet_t packet = {
+                .sequence_id = self->sequence_id,
+                .ack = connection->sequence_id
+            };
+            tp_socket__send_data_to(&self->tp_socket, &packet, sizeof(packet), connection->addr);
+            debug__write_and_flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO, "sent packet: "PACKET_FORMAT, packet.sequence_id, packet.ack);
+        }
+    }
+    ++self->sequence_id;
 }

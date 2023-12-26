@@ -42,6 +42,7 @@ enum debug_module {
     _DEBUG_MODULE_SIZE
 };
 
+void debug__write_raw(const char* format, ...);
 void debug__write(const char* format, ...);
 void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...);
 void debug__flush(debug_module_t module, debug_message_type_t message_type);

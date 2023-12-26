@@ -1,6 +1,6 @@
 #include "game_server.h"
 
-#include "udp.h"
+#include "tp.h"
 #include "system.h"
 #include "helper_macros.h"
 #include "debug.h"
@@ -14,22 +14,35 @@
 
 #include "game_server_impl.c"
 
-game_server_t game_server__create(uint16_t port) {
-    udp_socket_t udp_socket;
-    if (!udp_socket__create(&udp_socket, port)) {
+game_server_t game_server__create(game_server_config_t config, uint16_t port) {
+    game_t game_state = game__create();
+    if (!game_state) {
         return 0;
     }
+    debug__write("game state created");
 
-    game_t game_state = game__create();
-    (void) game_state;
+    tp_socket_t tp_socket;
+    if (!tp_socket__create(&tp_socket, SOCKET_TYPE_UDP, port)) {
+        return 0;
+    }
+    debug__write("udp socket created on port %u", port);
+
+    const uint32_t connections_size = 4;
+    connection_t* connections = calloc(1, connections_size * sizeof(*connections));
+    if (!connections) {
+        return 0;
+    }
+    debug__write("available connections left: %u", connections_size);
 
     game_server_t result = calloc(1, sizeof(*result));
     if (!result) {
         return 0;
     }
 
-    result->udp_socket = udp_socket;
-
+    memcpy(&result->config, &config, sizeof(result->config));
+    result->tp_socket = tp_socket;
+    result->connections_size = connections_size;
+    result->connections = connections;
     result->frame_info_sample_size = 128;
     result->frame_info_sample = malloc(result->frame_info_sample_size * sizeof(*result->frame_info_sample));
 
@@ -38,11 +51,17 @@ game_server_t game_server__create(uint16_t port) {
     game_server__push_stage(result, &loop_stage__update_loop);
     game_server__push_stage(result, &loop_stage__sleep_till_end_of_frame);
 
+    debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
+
     return result;
 }
 
 void game_server__destroy(game_server_t self) {
-    udp_socket__destroy(&self->udp_socket);
+    tp_socket__destroy(&self->tp_socket);
+
+    if (self->connections) {
+        free(self->connections);
+    }
 
     free(self);
 }

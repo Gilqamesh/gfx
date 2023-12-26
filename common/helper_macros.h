@@ -16,6 +16,12 @@
 # define MAX(x, y) ((int64_t)(x) < (int64_t)(y) ? (int64_t)(y) : (int64_t)(x))
 # define MIN(x, y) ((int64_t)(x) < (int64_t)(y) ? (int64_t)(x) : (int64_t)(y))
 
+# define BYTES(bytes)     (bytes)
+# define KILOBYTES(bytes) (BYTES(bytes) * 1024LL)
+# define MEGABYTES(bytes) (KILOBYTES(bytes) * 1024LL)
+# define GIGABYTES(bytes) (MEGABYTES(bytes) * 1024LL)
+# define TERABYTES(bytes) (GIGABYTES(bytes) * 1024LL)
+
 // todo: create dynamic array module
 #define ARRAY_ENSURE_TOP(array, array_top, array_size) do { \
     if ((array_top) >= (array_size)) { \

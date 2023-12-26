@@ -1,7 +1,11 @@
 struct         loop_stage;
 struct         frame_info;
-typedef struct loop_stage loop_stage_t;
-typedef struct frame_info frame_info_t;
+struct         image;
+struct         sent_packet;
+typedef struct loop_stage  loop_stage_t;
+typedef struct frame_info  frame_info_t;
+typedef struct image       image_t;
+typedef struct sent_packet sent_packet_t;
 
 struct frame_info {
     double   elapsed_time;
@@ -19,11 +23,33 @@ struct loop_stage {
     bool     (*loop_stage__execute)(struct loop_stage* self, game_client_t game_client);
 };
 
-struct game_client {
-    udp_socket_t   udp_socket;
+struct image {
+    uint8_t* data;
+    uint32_t w;
+    uint32_t h;
+};
 
-    network_addr_t server_addr;
-    uint32_t       sequence_id;
+struct sent_packet {
+    double   time;
+    uint32_t sequence_id;
+};
+
+struct game_client {
+    game_client_config_t config;
+    tp_socket_t          tp_socket;
+
+    cursor_t       cursor;
+    image_t        window_icon_image;
+    image_t        cursor_image;
+
+    connection_t   connection;
+    seq_id_t       sequence_id;
+
+    uint32_t       sent_packets_queue_head;
+    uint32_t       sent_packets_queue_tail;
+    uint32_t       sent_packets_queue_size;
+    sent_packet_t* sent_packets_queue;
+    double         time_round_trip;
 
     game_t         game_state;
 
@@ -46,8 +72,16 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_client_t game_client);
 static bool loop_stage__update_loop(loop_stage_t* self, game_client_t game_client);
 static bool loop_stage__sleep_till_end_of_frame(loop_stage_t* self, game_client_t game_client);
+
+static bool game_client__load_images(game_client_t self);
 static void game_client__sample_prev_frame(game_client_t self);
 static void game_client__push_stage(game_client_t self, bool (*stage_fn)(struct loop_stage* self, game_client_t game_client));
+static void game_client__ack_packet(game_client_t self, packet_t* packet, double time);
+static void game_client__accept_packet(game_client_t self, connection_t* connection, packet_t* packet, double time);
+static void game_client__receive_packets(game_client_t self, double time);
+static void game_client__send_packet(game_client_t self, double time);
+
+static bool sent_packet__is_acked(sent_packet_t* self);
 
 static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_client_t game_client) {
     game_client->previous_frame_info.time_start         = game_client->previous_frame_info.time_end;
@@ -115,55 +149,9 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
     return true;
 }
 
-static void game_client__receive_packet(game_client_t self) {
-    packet_t packet;
-    uint32_t received_data_len = 0;
-    network_addr_t sender_addr;
-    if (udp_socket__get_data(&self->udp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
-        if (received_data_len == sizeof(packet)) {
-            if (
-                sender_addr.addr == self->server_addr.addr &&
-                sender_addr.port == self->server_addr.port
-            ) {
-                // received packet is from the server
-                debug__write_and_flush(
-                    DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-                    "received packet from server, remote seq id: %u, local seq id: %u",
-                    packet.sequence_id, self->sequence_id
-                );
-                // update local sequence id to the server
-                self->sequence_id = packet.sequence_id;
-            } else {
-                // packet is not from server -> discard packet
-                debug__write_and_flush(
-                    DEBUG_MODULE_GAME_SERVER, DEBUG_INFO,
-                    "discarded packet as it is not from the server, received from: <todo with inet_ntop>"
-                );
-            }
-        } else {
-            debug__write_and_flush(
-                DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
-                "unknown packet size received: %u, expected: %u",
-                received_data_len, sizeof(packet)
-            );
-        }
-    }
-}
-
-static void game_client__send_packet(game_client_t self) {
-    packet_t packet = {
-        .sequence_id = self->sequence_id
-    };
-    udp_socket__send_data(&self->udp_socket, &packet, sizeof(packet));
-}
-
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_client_t game_client) {
-    (void) self;
-
-    game_client__receive_packet(game_client);
-    game_client__send_packet(game_client);
-
-    ++game_client->sequence_id;
+    game_client__receive_packets(game_client, self->time_start);
+    game_client__send_packet(game_client, self->time_start);
 
     return true;
 }
@@ -198,6 +186,20 @@ static bool loop_stage__sleep_till_end_of_frame(loop_stage_t* self, game_client_
     return true;
 }
 
+static bool game_client__load_images(game_client_t self) {
+    int number_of_channels_per_pixel;
+    self->window_icon_image.data = stbi_load("game/assets/icon.png", (int32_t*) &self->window_icon_image.w, (int32_t*) &self->window_icon_image.h, &number_of_channels_per_pixel, 0);
+    if (!self->window_icon_image.data) {
+        return false;
+    }
+    self->cursor_image.data = stbi_load("game/assets/cursor.png", (int32_t*) &self->cursor_image.w, (int32_t*) &self->cursor_image.h, &number_of_channels_per_pixel, 0);
+    if (!self->cursor_image.data) {
+        return false;
+    }
+
+    return true;
+}
+
 static void game_client__sample_prev_frame(game_client_t self) {
     ASSERT(self->frame_info_sample_index_head < self->frame_info_sample_size);
     frame_info_t* frame_info_sample = &self->frame_info_sample[self->frame_info_sample_index_head++];
@@ -218,4 +220,134 @@ static void game_client__push_stage(game_client_t self, bool (*stage_fn)(struct 
     ARRAY_ENSURE_TOP(self->loop_stages, self->loop_stages_top, self->loop_stages_size);
     self->loop_stages[self->loop_stages_top].loop_stage__execute = stage_fn;
     ++self->loop_stages_top;
+}
+
+static void game_client__ack_packet(game_client_t self, packet_t* packet, double time) {
+    const uint32_t local_seq_id_delta = sequence_id__delta(self->sequence_id, packet->ack);
+    if (local_seq_id_delta < self->sent_packets_queue_size) {
+        const uint32_t packet_index_to_ack = (self->sent_packets_queue_head + self->sent_packets_queue_size - local_seq_id_delta) % self->sent_packets_queue_size;
+        sent_packet_t* packet_to_ack = &self->sent_packets_queue[packet_index_to_ack];
+        ASSERT(packet_to_ack->sequence_id == packet->ack);
+        if (!sent_packet__is_acked(packet_to_ack)) {
+            double time_round_trip = time - self->previous_frame_info.elapsed_time - packet_to_ack->time;
+            packet_to_ack->time = 0.0;
+            if (self->time_round_trip == 0.0) {
+                self->time_round_trip = time_round_trip;
+            } else {
+                const double percentage_to_move = 0.1;
+                self->time_round_trip = (1.0 - percentage_to_move) * self->time_round_trip + percentage_to_move * time_round_trip;
+            }
+            debug__write("rtt: %lfms", self->time_round_trip * 1000.0);
+
+            // todo: discard packet
+            // if (time_round_trip > 1.0) {
+            //     // discard packet
+            // }
+            debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO);
+            // ASSERT(time_round_trip >= 0.0);
+        }
+    }
+}
+
+static void game_client__accept_packet(game_client_t self, connection_t* connection, packet_t* packet, double time) {
+    connection->time_last_sent = time;
+    if (sequence_id__is_more_recent(packet->sequence_id, connection->sequence_id)) {
+        const uint32_t connection_seq_id_delta = sequence_id__delta(packet->sequence_id, connection->sequence_id);
+        if (connection_seq_id_delta <= (sizeof(connection->ack_bitfield_queue) << 3)) {
+            ASSERT(connection_seq_id_delta > 0);
+            const uint32_t shift_by = connection_seq_id_delta - 1;
+            connection->ack_bitfield_queue <<= shift_by;
+            connection->ack_bitfield_queue |= 1;
+        }
+
+        connection->sequence_id = packet->sequence_id;
+    }
+
+    game_client__ack_packet(self, packet, time);
+
+    debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "recv packet: "PACKET_FORMAT, packet->sequence_id, packet->ack);
+}
+
+static void game_client__receive_packets(game_client_t self, double time) {
+    packet_t packet;
+    uint32_t received_data_len = 0;
+    network_addr_t sender_addr;
+    // todo: process a limited amount
+    while (tp_socket__get_data(&self->tp_socket, &packet, sizeof(packet), &received_data_len, &sender_addr)) {
+        if (received_data_len == sizeof(packet)) {
+            if (network_addr__is_same(&sender_addr, &self->connection.addr)) {
+                game_client__accept_packet(self, &self->connection, &packet, time);
+            } else {
+                // packet is not from server -> discard packet
+                debug__write_and_flush(
+                    DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
+                    "discarded packet as it is not from the server, received from: <todo with inet_ntop>"
+                );
+            }
+        } else {
+            debug__write_and_flush(
+                DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO,
+                "unknown packet size received: %u, expected: %u",
+                received_data_len, sizeof(packet)
+            );
+        }
+    }
+}
+
+static void game_client__debug_packet(packet_t* packet) {
+    debug__write("packet:");
+    debug__write("seq:  %u", packet->sequence_id);
+    debug__write("ack:  %u", packet->ack);
+    debug__write_raw("ackb: ");
+    for (uint32_t bit_index = 0; bit_index < (sizeof(packet->ack_bitfield) << 3); ++bit_index) {
+        uint32_t bit = (packet->ack_bitfield & (1 << bit_index)) >> bit_index;
+        debug__write_raw("%c", bit ? '1' : '0');
+        if (bit_index > 0 && bit_index % 8 == 0) {
+            debug__write_raw(" ");
+        }
+    }
+    debug__write_raw("\n");
+    debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO);
+}
+
+static void game_client__send_packet(game_client_t self, double time) {
+    packet_t packet = {
+        .sequence_id = self->sequence_id,
+        .ack = self->connection.sequence_id,
+        .ack_bitfield = self->connection.ack_bitfield_queue
+    };
+
+    ASSERT(self->sent_packets_queue_head < self->frame_info_sample_size);
+    sent_packet_t* sent_packet = &self->sent_packets_queue[self->sent_packets_queue_head++];
+
+    if (
+        sent_packet->time > 0.0 &&
+        time - sent_packet->time > self->config.max_time_after_packet_is_lost
+    ) {
+        debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "lost packet: %u", sent_packet->sequence_id);
+    }
+
+    sent_packet->sequence_id = packet.sequence_id;
+    sent_packet->time = time;
+
+    if (self->sent_packets_queue_head == self->sent_packets_queue_size) {
+        self->sent_packets_queue_head = 0;
+    }
+    if (self->sent_packets_queue_head == self->sent_packets_queue_tail) {
+        ++self->sent_packets_queue_tail;
+        if (self->sent_packets_queue_tail == self->sent_packets_queue_size) {
+            self->sent_packets_queue_tail = 0;
+        }
+    }
+
+    tp_socket__send_data(&self->tp_socket, &packet, sizeof(packet));
+
+    game_client__debug_packet(&packet);
+    // debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "sent packet: "PACKET_FORMAT, packet.sequence_id, packet.ack);
+
+    ++self->sequence_id;
+}
+
+static bool sent_packet__is_acked(sent_packet_t* self) {
+    return self->time == 0.0;
 }

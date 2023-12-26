@@ -1,5 +1,8 @@
 #include "debug.h"
 
+#include "str_builder.h"
+#include "helper_macros.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
@@ -9,6 +12,10 @@
 
 bool debug__init_module() {
     memset(&debug, 0, sizeof(debug));
+
+    const uint32_t str_builder_memory_size = KILOBYTES(4);
+    void* str_builder_memory = malloc(str_builder_memory_size);
+    str_builder__create(&debug.str_builder, str_builder_memory, str_builder_memory_size);
 
     for (uint32_t error_level_availability_index = 0; error_level_availability_index < _DEBUG_MESSAGE_TYPE_SIZE; ++error_level_availability_index) {
         debug.error_level_availability[error_level_availability_index] = true;
@@ -23,19 +30,27 @@ bool debug__init_module() {
         return false;
     }
 
-    const uint32_t buffer_size = 1024;
-    debug.buffer_start = calloc(1, buffer_size);
-    debug.buffer_end   = debug.buffer_start + buffer_size;
-    debug.buffer_cur   = debug.buffer_start;
-
     return true;
 }
 
-void debug__deinit_module() {
+void debug__deinit_module() {    
     if (debug.error_file) {
         fclose(debug.error_file);
         debug.error_file = 0;
     }
+
+    if (debug.str_builder.start) {
+        free(debug.str_builder.start);
+    }
+}
+
+void debug__write_raw(const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+
+    str_builder__vappend(&debug.str_builder, format, ap);
+
+    va_end(ap);
 }
 
 void debug__write(const char* format, ...) {
@@ -81,9 +96,7 @@ void debug__flush(debug_module_t module, debug_message_type_t message_type) {
 }
 
 void debug__clear() {
-    debug.buffer_cur = debug.buffer_start;
-    ASSERT(debug.buffer_cur);
-    *debug.buffer_cur = '\0';
+    str_builder__clear(&debug.str_builder);
     debug.number_of_lines = 0;
 }
 

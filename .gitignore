@@ -1,3 +1,4 @@
 *.o
-debug.txt
+debug/debug.txt
 a.out
+b.out

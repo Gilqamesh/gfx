@@ -118,6 +118,10 @@ static void supported_module__init_common_module(supported_module_t* self) {
     module_file__add_common_cflags(hash_map_file);
     module_file__add_debug_cflags(hash_map_file);
 
+    module_file_t str_builder_file = module__add_file(self->module, "str_builder.c");
+    module_file__add_common_cflags(str_builder_file);
+    module_file__add_debug_cflags(str_builder_file);
+
     (void) module_file__add_release_cflags;
 
     // TODO: add module level cflags that needs to apply to modules who depend on this module
@@ -144,6 +148,8 @@ static void supported_module__init_debug_module(supported_module_t* self) {
 
     module_file__add_common_cflags(debug_file);
     module_file__add_debug_cflags(debug_file);
+
+    module__add_supported_dependency(self->module, COMMON_MODULE);
 }
 
 static void supported_module__init_game_server_module(supported_module_t* self) {
@@ -178,13 +184,14 @@ static void supported_module__init_game_client_module(supported_module_t* self) 
     module__add_supported_dependency(self->module, SYSTEM_MODULE);
     module__add_supported_dependency(self->module, DEBUG_MODULE);
     module__add_supported_dependency(self->module, GAME_MODULE);
+    module__add_supported_dependency(self->module, GFX_MODULE);
 }
 
 static void supported_module__init_transport_protocol_module(supported_module_t* self) {
-    module_file_t udp_file = module__add_file(self->module, "udp.c");
+    module_file_t tp_file = module__add_file(self->module, "tp.c");
 
-    module_file__add_common_cflags(udp_file);
-    module_file__add_debug_cflags(udp_file);
+    module_file__add_common_cflags(tp_file);
+    module_file__add_debug_cflags(tp_file);
 }
 
 static void supported_module__init_system_module(supported_module_t* self) {
@@ -207,7 +214,6 @@ static void supported_module__init_game_module(supported_module_t* self) {
 
     module__append_lflag(self->module, "-lm");
 
-    module__add_supported_dependency(self->module, GFX_MODULE);
     module__add_supported_dependency(self->module, DEBUG_MODULE);
     module__add_supported_dependency(self->module, SYSTEM_MODULE);
 }

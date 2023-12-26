@@ -1,4 +1,4 @@
-#include "udp.h"
+#include "tp.h"
 
 #include <stdio.h>
 
@@ -24,13 +24,31 @@ bool network_addr__create(network_addr_t* self, const char* ip, uint16_t port) {
     return true;
 }
 
-bool udp_socket__create(udp_socket_t* self, uint16_t port) {
+bool network_addr__is_same(network_addr_t* self, network_addr_t* other) {
+    return self->addr == other->addr && self->port == other->port;
+}
+
+bool tp_socket__create(tp_socket_t* self, socket_type_t type, uint16_t port) {
     struct sockaddr_in src_addr;
     src_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     src_addr.sin_family = AF_INET;
     src_addr.sin_port = htons(port);
 
-    int32_t socket_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+    int32_t sock_type = 0;
+    int32_t protocol = 0;
+    switch (type) {
+        case SOCKET_TYPE_UDP: {
+            sock_type = SOCK_DGRAM | SOCK_NONBLOCK;
+            protocol = IPPROTO_UDP;
+        } break ;
+        case SOCKET_TYPE_TCP: {
+            sock_type = SOCK_STREAM | SOCK_NONBLOCK;
+            protocol = IPPROTO_TCP;
+        } break ;
+        default: return false;
+    }
+
+    int32_t socket_fd = socket(AF_INET, sock_type, protocol);
     if (socket_fd == -1) {
         perror(0);
         return false;
@@ -43,7 +61,6 @@ bool udp_socket__create(udp_socket_t* self, uint16_t port) {
     }
 
     if (bind(socket_fd, (const struct sockaddr*) &src_addr, sizeof(src_addr)) == -1) {
-        fprintf(stderr, "%d\n", errno);
         perror(0);
         return false;
     }
@@ -53,11 +70,11 @@ bool udp_socket__create(udp_socket_t* self, uint16_t port) {
     return true;
 }
 
-void udp_socket__destroy(udp_socket_t* self) {
+void tp_socket__destroy(tp_socket_t* self) {
     close(self->socket);
 }
 
-bool udp_socket__connect(udp_socket_t* self, network_addr_t addr) {
+bool tp_socket__connect(tp_socket_t* self, network_addr_t addr) {
     struct sockaddr_in dst_addr = { 0 };
     dst_addr.sin_addr.s_addr = addr.addr;
     dst_addr.sin_family = AF_INET;
@@ -71,7 +88,7 @@ bool udp_socket__connect(udp_socket_t* self, network_addr_t addr) {
     return true;
 }
 
-bool udp_socket__send_data(udp_socket_t* self, const void* data, uint32_t data_size) {
+bool tp_socket__send_data(tp_socket_t* self, const void* data, uint32_t data_size) {
     if (send(self->socket, data, data_size, MSG_DONTWAIT) == -1) {
         return false;
     }
@@ -79,7 +96,7 @@ bool udp_socket__send_data(udp_socket_t* self, const void* data, uint32_t data_s
     return true;
 }
 
-bool udp_socket__send_data_to(udp_socket_t* self, const void* data, uint32_t data_size, network_addr_t dst_info) {
+bool tp_socket__send_data_to(tp_socket_t* self, const void* data, uint32_t data_size, network_addr_t dst_info) {
     struct sockaddr_in dst_addr = { 0 };
     dst_addr.sin_addr.s_addr = dst_info.addr;
     dst_addr.sin_family = AF_INET;
@@ -91,7 +108,7 @@ bool udp_socket__send_data_to(udp_socket_t* self, const void* data, uint32_t dat
     return true;
 }
 
-bool udp_socket__get_data(udp_socket_t* self, void* data, uint32_t data_size, uint32_t* data_len, network_addr_t* sender_addr) {
+bool tp_socket__get_data(tp_socket_t* self, void* data, uint32_t data_size, uint32_t* data_len, network_addr_t* sender_addr) {
     struct sockaddr src_addr;
     socklen_t src_addr_len_original = sizeof(src_addr);
     socklen_t src_addr_len = src_addr_len_original;

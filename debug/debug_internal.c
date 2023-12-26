@@ -1,7 +1,5 @@
 typedef struct debug {
-    char*    buffer_cur;
-    char*    buffer_end;
-    char*    buffer_start;
+    str_builder_t str_builder;
 
     uint32_t number_of_lines;
     bool     error_level_availability[_DEBUG_MESSAGE_TYPE_SIZE];
@@ -42,33 +40,20 @@ static const char* debug_module__to_str(debug_module_t module) {
     return 0;
 }
 
-static void debug__vwrite(const char* format, va_list ap) {
+static void debug__vwrite(const char* format, va_list ap) {    
     const char* line_prefix = "  ";
-    const uint32_t line_prefix_len = strlen(line_prefix);
-
     if (debug.number_of_lines == 1) {
-        assert(debug.buffer_cur + line_prefix_len <= debug.buffer_end);
-        // prepend first line
-        memmove(debug.buffer_start + line_prefix_len, debug.buffer_start, debug.buffer_cur - debug.buffer_start);
-        memcpy(debug.buffer_start, line_prefix, line_prefix_len);
-        debug.buffer_cur += line_prefix_len;
+        str_builder__prepend(&debug.str_builder, "%s", line_prefix);
     }
 
     if (debug.number_of_lines > 0) {
-        // prepend current line
-        int32_t bytes_written = snprintf(debug.buffer_cur, debug.buffer_end - debug.buffer_cur, "%s", line_prefix);
-        debug.buffer_cur += bytes_written;
+        str_builder__append(&debug.str_builder, "%s", line_prefix);
     }
+
+    str_builder__vappend(&debug.str_builder, format, ap);
+    str_builder__append(&debug.str_builder, "\n");
+
     ++debug.number_of_lines;
-
-    int32_t bytes_written = vsnprintf(debug.buffer_cur, debug.buffer_end - debug.buffer_cur, format, ap);
-    ASSERT(bytes_written >= 0);
-    debug.buffer_cur += bytes_written;
-
-    if (debug.buffer_cur != debug.buffer_end) {
-        *debug.buffer_cur = '\n';
-        ++debug.buffer_cur;
-    }
 }
 
 static void debug__flush_helper(FILE* fp, debug_module_t module, debug_message_type_t message_type) {
@@ -83,5 +68,5 @@ static void debug__flush_helper(FILE* fp, debug_module_t module, debug_message_t
         fprintf(fp, "\n");
     }
 
-    fprintf(fp, "%s", debug.buffer_start);
+    fprintf(fp, "%s", str_builder__str(&debug.str_builder));
 }

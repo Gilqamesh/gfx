@@ -171,7 +171,7 @@ int32_t module__is_compiled(module_t self) {
 }
 
 void module__wait_for_compilation(module_t self) {
-    if (module__is_compiled(self)) {
+    if (module__is_compiled(self) > 0) {
         return ;
     }
 

@@ -4,9 +4,16 @@
 # include <stdint.h>
 
 struct         game_client;
-typedef struct game_client* game_client_t;
+struct         game_client_config;
+typedef struct game_client*       game_client_t;
+typedef struct game_client_config game_client_config_t;
 
-game_client_t game_client__create(const char* server_ip, uint16_t server_port);
+struct game_client_config {
+    const double max_time_after_packet_is_lost;
+    const double max_target_fps;
+};
+
+game_client_t game_client__create(game_client_config_t config, uint16_t client_port, const char* server_ip, uint16_t server_port);
 void game_client__destroy(game_client_t self);
 
 void game_client__run(game_client_t self, double target_fps);
