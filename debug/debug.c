@@ -44,18 +44,6 @@ void debug__deinit_module() {
     }
 }
 
-void debug__write_packet_raw(packet_t* packet) {
-    debug__write_raw("%-10u%-10u", packet->sequence_id, packet->ack);
-    for (int32_t bit_index = (sizeof(packet->ack_bitfield) << 3) - 1; bit_index >= 0; --bit_index) {
-        uint32_t bit = (packet->ack_bitfield & (1 << bit_index)) >> bit_index;
-        debug__write_raw("%c", bit ? '1' : '0');
-        if (bit_index > 0 && bit_index % 8 == 0) {
-            debug__write_raw(" ");
-        }
-    }
-    debug__write_raw("\n");
-}
-
 void debug__write_raw(const char* format, ...) {
     va_list ap;
     va_start(ap, format);
@@ -65,11 +53,11 @@ void debug__write_raw(const char* format, ...) {
     va_end(ap);
 }
 
-void debug__write(const char* format, ...) {
+void debug__writeln(const char* format, ...) {
     va_list ap;
     va_start(ap, format);
 
-    debug__vwrite(format, ap);
+    debug__vwriteln(format, ap);
 
     va_end(ap);
 }
@@ -83,7 +71,7 @@ void debug__write_and_flush(debug_module_t module, debug_message_type_t message_
     va_list ap;
     va_start(ap, format);
 
-    debug__vwrite(format, ap);
+    debug__vwriteln(format, ap);
 
     va_end(ap);
 

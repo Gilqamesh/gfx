@@ -107,6 +107,8 @@ void game_client__destroy(game_client_t self) {
 void game_client__run(game_client_t self, double target_fps) {
     debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "target fps: %lf", target_fps);
 
+    debug__set_message_type_availability(DEBUG_NET, false);
+
     self->previous_frame_info.time_frame_expected = 1.0 / target_fps;
     self->time_game_update_fixed                  = game__update_upper_bound(self->game_state);
     system__init();

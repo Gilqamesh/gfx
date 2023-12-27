@@ -30,29 +30,25 @@ struct packet {
 
 struct connection {
     network_addr_t addr;
-    double         time_last_sent;
+    double         time_last_seen;
     seq_id_t       sequence_id;
     uint32_t       ack_bitfield;
+    uint32_t       packets_dropped;
+    double         rtt;
     double         time_connected;
     bool           connected;
 };
 
-static inline bool sequence_id__is_more_recent(seq_id_t seq_id_1, seq_id_t seq_id_2) {
-    return (
-        (seq_id_1 > seq_id_2 && seq_id_1 - seq_id_2 <= (((seq_id_t)-1) >> 1)) ||
-        (seq_id_2 > seq_id_1 && seq_id_2 - seq_id_1 >  (((seq_id_t)-1) >> 1))
-    );
-}
+void debug__write_ack_bitfield_raw(uint32_t ack_bitfield);
+void debug__write_packet_raw(packet_t* packet);
+
+bool sequence_id__is_more_recent(seq_id_t seq_id_1, seq_id_t seq_id_2);
 
 /**
  * @returns Number of packages between 'newer_seq_id' and 'older_seq_id'
 */
-static inline seq_id_t sequence_id__delta(seq_id_t newer_seq_id, seq_id_t older_seq_id) {
-    return newer_seq_id - older_seq_id;
-}
+seq_id_t sequence_id__delta(seq_id_t newer_seq_id, seq_id_t older_seq_id);
 
-static inline seq_id_t sequence_id__sub(seq_id_t seq_id_1, uint32_t val) {
-    return (seq_id_t) (seq_id_1 - val);
-}
+seq_id_t sequence_id__sub(seq_id_t seq_id_1, uint32_t val);
 
 #endif // PACKET_H

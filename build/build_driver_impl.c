@@ -149,7 +149,6 @@ static void supported_module__init_debug_module(supported_module_t* self) {
     module_file__add_common_cflags(debug_file);
     module_file__add_debug_cflags(debug_file);
 
-    module__add_supported_dependency(self->module, TP_MODULE);
     module__add_supported_dependency(self->module, COMMON_MODULE);
 }
 
@@ -193,6 +192,13 @@ static void supported_module__init_transport_protocol_module(supported_module_t*
 
     module_file__add_common_cflags(tp_file);
     module_file__add_debug_cflags(tp_file);
+
+    module_file_t packet_file = module__add_file(self->module, "packet.c");
+
+    module_file__add_common_cflags(packet_file);
+    module_file__add_debug_cflags(packet_file);
+
+    module__add_supported_dependency(self->module, DEBUG_MODULE);
 }
 
 static void supported_module__init_system_module(supported_module_t* self) {

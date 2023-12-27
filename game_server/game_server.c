@@ -19,20 +19,20 @@ game_server_t game_server__create(game_server_config_t config, uint16_t port) {
     if (!game_state) {
         return 0;
     }
-    debug__write("game state created");
+    debug__writeln("game state created");
 
     tp_socket_t tp_socket;
     if (!tp_socket__create(&tp_socket, SOCKET_TYPE_UDP, port)) {
         return 0;
     }
-    debug__write("udp socket created on port %u", port);
+    debug__writeln("udp socket created on port %u", port);
 
     const uint32_t connections_size = 4;
     connection_t* connections = calloc(1, connections_size * sizeof(*connections));
     if (!connections) {
         return 0;
     }
-    debug__write("available connections left: %u", connections_size);
+    debug__writeln("available connections left: %u", connections_size);
 
     game_server_t result = calloc(1, sizeof(*result));
     if (!result) {

@@ -95,10 +95,10 @@ static void APIENTRY gl__error_message_callback(
     const uint32_t max_type_len          = MAX(MAX(source_type_str_len, type_type_str_len), severity_type_str_len);
     const uint32_t max_str_len           = MAX(MAX(source_str_len, type_str_len), severity_str_len);
 
-    debug__write("source:   %-*.*s %-*.*s", max_type_len, max_type_len, source_type_str,   max_str_len, max_str_len, source_str);
-    debug__write("type:     %-*.*s %-*.*s", max_type_len, max_type_len, type_type_str,     max_str_len, max_str_len, type_str);
-    debug__write("severity: %-*.*s %-*.*s", max_type_len, max_type_len, severity_type_str, max_str_len, max_str_len, severity_str);
-    debug__write("message:  %s", message);
+    debug__writeln("source:   %-*.*s %-*.*s", max_type_len, max_type_len, source_type_str,   max_str_len, max_str_len, source_str);
+    debug__writeln("type:     %-*.*s %-*.*s", max_type_len, max_type_len, type_type_str,     max_str_len, max_str_len, type_str);
+    debug__writeln("severity: %-*.*s %-*.*s", max_type_len, max_type_len, severity_type_str, max_str_len, max_str_len, severity_str);
+    debug__writeln("message:  %s", message);
     debug__flush(DEBUG_MODULE_GL, DEBUG_ERROR);
 }
 

@@ -11,7 +11,7 @@ static debug_t debug;
 
 static const char* debug_message_type__to_str(debug_message_type_t message_type);
 static const char* debug_module__to_str(debug_module_t module);
-static void debug__vwrite(const char* format, va_list ap);
+static void debug__vwriteln(const char* format, va_list ap);
 static void debug__flush_helper(FILE* fp, debug_module_t module, debug_message_type_t message_type);
 
 static const char* debug_message_type__to_str(debug_message_type_t message_type) {
@@ -41,7 +41,7 @@ static const char* debug_module__to_str(debug_module_t module) {
     return 0;
 }
 
-static void debug__vwrite(const char* format, va_list ap) {    
+static void debug__vwriteln(const char* format, va_list ap) {
     const char* line_prefix = "  ";
     if (debug.number_of_lines == 1) {
         str_builder__prepend(&debug.str_builder, "%s", line_prefix);

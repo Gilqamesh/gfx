@@ -6,8 +6,6 @@
 # include <assert.h>
 # include <stdint.h>
 
-# include "packet.h"
-
 // todo: turn some of the message types that are resource-intensitve into compile-time api
 
 # define ASSERT(expr) do { \
@@ -45,9 +43,8 @@ enum debug_module {
     _DEBUG_MODULE_SIZE
 };
 
-void debug__write_packet_raw(packet_t* packet);
 void debug__write_raw(const char* format, ...);
-void debug__write(const char* format, ...);
+void debug__writeln(const char* format, ...);
 void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...);
 void debug__flush(debug_module_t module, debug_message_type_t message_type);
 void debug__clear();

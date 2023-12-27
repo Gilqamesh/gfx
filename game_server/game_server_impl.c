@@ -113,19 +113,19 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
             time_render_actual_avg   /= frame_samples_count;
             number_of_updates_avg    /= frame_samples_count;
 
-            debug__write("Frame #%u", game_server->current_frame);
-            debug__write("Time lost:   %lf", game_server->time_lost);
-            debug__write("Frames lost: %lf", game_server->frames_lost);
-            debug__write("Frame avg info across %u frames", frame_samples_count);
-            debug__write("  Game updates:            %lf", number_of_updates_avg);
-            debug__write("  Time:");
-            debug__write("    Total:                 %lfs", game_server->previous_frame_info.time_end);
-            debug__write("    Game update actual:    %lfus", time_update_actual_avg * 1000000);
-            debug__write("    Game update fixed:     %lfus", game_server->time_game_update_fixed * 1000000);
-            debug__write("    Render actual:         %lfus", time_render_actual_avg * 1000000);
-            debug__write("    Frame actual:          %lfms, %lffps", time_frame_actual_avg * 1000.0, 1.0 / time_frame_actual_avg);
-            debug__write("    Frame expected:        %lfms, %lffps", time_frame_expected_avg * 1000.0, 1.0 / time_frame_expected_avg);
-            debug__write("    Left to process:       %lfms", (game_server->time_update_to_process - game_server->previous_frame_info.elapsed_time) * 1000.0);
+            debug__writeln("Frame #%u", game_server->current_frame);
+            debug__writeln("Time lost:   %lf", game_server->time_lost);
+            debug__writeln("Frames lost: %lf", game_server->frames_lost);
+            debug__writeln("Frame avg info across %u frames", frame_samples_count);
+            debug__writeln("  Game updates:            %lf", number_of_updates_avg);
+            debug__writeln("  Time:");
+            debug__writeln("    Total:                 %lfs", game_server->previous_frame_info.time_end);
+            debug__writeln("    Game update actual:    %lfus", time_update_actual_avg * 1000000);
+            debug__writeln("    Game update fixed:     %lfus", game_server->time_game_update_fixed * 1000000);
+            debug__writeln("    Render actual:         %lfus", time_render_actual_avg * 1000000);
+            debug__writeln("    Frame actual:          %lfms, %lffps", time_frame_actual_avg * 1000.0, 1.0 / time_frame_actual_avg);
+            debug__writeln("    Frame expected:        %lfms, %lffps", time_frame_expected_avg * 1000.0, 1.0 / time_frame_expected_avg);
+            debug__writeln("    Left to process:       %lfms", (game_server->time_update_to_process - game_server->previous_frame_info.elapsed_time) * 1000.0);
             debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
         }
     }
@@ -199,9 +199,9 @@ static void game_server__disconnect_connection(game_server_t self, connection_t*
     --self->connections_fill;
 
     connection->connected = false;
-    debug__write("client disconnected from the server: %u:%u", connection->addr.addr, connection->addr.port);
-    debug__write("last known packet from them: %u, local sequence id: %u", connection->sequence_id, self->sequence_id);
-    debug__write("available connections: %u", self->connections_size - self->connections_fill);
+    debug__writeln("client disconnected from the server: %u:%u", connection->addr.addr, connection->addr.port);
+    debug__writeln("last known packet from them: %u, local sequence id: %u", connection->sequence_id, self->sequence_id);
+    debug__writeln("available connections: %u", self->connections_size - self->connections_fill);
     debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
 }
 
@@ -212,22 +212,24 @@ static void game_server__connection__accept(
     ASSERT(self->connections_fill < self->connections_size);
     ++self->connections_fill;
 
-    connection->addr           = sender_addr;
-    connection->time_last_sent = time;
-    connection->sequence_id    = packet->sequence_id;
-    connection->ack_bitfield   = -1;
-    connection->time_connected = time;
-    connection->connected      = true;
+    connection->addr            = sender_addr;
+    connection->time_last_seen  = time;
+    connection->sequence_id     = packet->sequence_id;
+    connection->ack_bitfield    = -1;
+    connection->packets_dropped = 0;
+    connection->rtt             = 0.0;
+    connection->time_connected  = time;
+    connection->connected       = true;
 
-    debug__write("client connected to the server: %u:%u", sender_addr.addr, sender_addr.port);
-    debug__write("available connections left: %u", self->connections_size - self->connections_fill);
+    debug__writeln("client connected to the server: %u:%u", sender_addr.addr, sender_addr.port);
+    debug__writeln("available connections left: %u", self->connections_size - self->connections_fill);
     debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
 }
 
 static void game_server__accept_packet(game_server_t self, connection_t* connection, packet_t* packet, double time) {
     (void) self;
 
-    connection->time_last_sent = time;
+    connection->time_last_seen = time;
 
     if (sequence_id__is_more_recent(packet->sequence_id, connection->sequence_id)) {
         const uint32_t connection_seq_id_delta = sequence_id__delta(packet->sequence_id, connection->sequence_id);
@@ -292,7 +294,7 @@ static void game_server__receive_packets(game_server_t self, double time) {
     for (uint32_t connection_index = 0; connection_index < self->connections_size; ++connection_index) {
         connection_t* connection = &self->connections[connection_index];
         if (connection->connected) {
-            if (connection->time_last_sent + self->config.max_time_for_disconnect < time) {
+            if (connection->time_last_seen + self->config.max_time_for_disconnect < time) {
                 game_server__disconnect_connection(self, connection);
             }
         }
@@ -325,6 +327,7 @@ static void connection__check_for_lost_packets(connection_t* connection, uint32_
         uint32_t bit_index_end = 0;
         if (left_shift > (sizeof(connection->ack_bitfield) << 3)) {
             bit_index_end = sizeof(connection->ack_bitfield) << 3;
+            ++connection->packets_dropped;
             debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET, "LOST PACKET: %u", connection->sequence_id);
         } else {
             bit_index_end = left_shift;
@@ -334,6 +337,7 @@ static void connection__check_for_lost_packets(connection_t* connection, uint32_
             const uint32_t bit_mask_index = ((sizeof(connection->ack_bitfield) << 3) - 1 - bit_index);
             const uint32_t bit_mask = 1 << bit_mask_index;
             if ((connection->ack_bitfield & bit_mask) == 0) {
+                ++connection->packets_dropped;
                 debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET, "LOST PACKET: %u", sequence_id__sub(connection->sequence_id, bit_mask_index + 1));
             }
         }

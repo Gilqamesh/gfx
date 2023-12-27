@@ -27,9 +27,9 @@ static bool vk__check_if_validation_layer_is_available(const char* validation_la
     VkLayerProperties* vk_layer_properties = malloc(vk_layer_properties_count * sizeof(*vk_layer_properties));
     vkEnumerateInstanceLayerProperties(&vk_layer_properties_count, vk_layer_properties);
     bool layer_found = false;
-    debug__write("validation layers:");
+    debug__writeln("validation layers:");
     for (uint32_t vk_layer_properties_index = 0; vk_layer_properties_index < vk_layer_properties_count; ++vk_layer_properties_index) {
-        debug__write("%s", vk_layer_properties[vk_layer_properties_index].layerName);
+        debug__writeln("%s", vk_layer_properties[vk_layer_properties_index].layerName);
         if (strcmp(vk_layer_properties[vk_layer_properties_index].layerName, validation_layer_name) == 0) {
             layer_found = true;
             break ;
@@ -61,12 +61,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vk__debug_callback(
         }
     }
 
-    debug__write("severity:   %-*.*s", max_str_len, max_str_len, message_severity_str);
-    debug__write("type:       %-*.*s", max_str_len, max_str_len, message_type_str);
-    debug__write("message:    %-*.*s", max_str_len, max_str_len, callback_data->pMessage);
-    debug__write("vk objects:");
+    debug__writeln("severity:   %-*.*s", max_str_len, max_str_len, message_severity_str);
+    debug__writeln("type:       %-*.*s", max_str_len, max_str_len, message_type_str);
+    debug__writeln("message:    %-*.*s", max_str_len, max_str_len, callback_data->pMessage);
+    debug__writeln("vk objects:");
     for (uint32_t vk_obj_index = 0; vk_obj_index < callback_data->objectCount; ++vk_obj_index) {
-        debug__write("    %-*.*s", callback_data->pObjects[vk_obj_index].pObjectName);
+        debug__writeln("    %-*.*s", callback_data->pObjects[vk_obj_index].pObjectName);
     }
     debug__flush(DEBUG_MODULE_VULKAN, DEBUG_ERROR);
 

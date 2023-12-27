@@ -34,18 +34,18 @@ bool gfx__init() {
 
     glfwSetErrorCallback(&gfx__error_callback);
 
-    debug__write("version string: %s", glfwGetVersionString());
-    debug__write("compiled version: %d.%d.%d", GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION);
+    debug__writeln("version string: %s", glfwGetVersionString());
+    debug__writeln("compiled version: %d.%d.%d", GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION);
 
     int major = 0;
     int minor = 0;
     int rev   = 0;
     glfwGetVersion(&major, &minor, &rev);
-    debug__write("runtime version: %d.%d.%d", major, minor, rev);
+    debug__writeln("runtime version: %d.%d.%d", major, minor, rev);
 
     // glfwInitHint();
     if (glfwInit() == GLFW_FALSE) {
-        debug__write("glfwInit == GLFW_FALSE");
+        debug__writeln("glfwInit == GLFW_FALSE");
         debug__flush(DEBUG_MODULE_GLFW, DEBUG_ERROR);
         return false;
     }
@@ -58,7 +58,7 @@ bool gfx__init() {
     gfx.monitors_size = number_of_monitors;
     gfx.monitors_top = number_of_monitors;
     gfx.monitors = malloc(gfx.monitors_size * sizeof(*gfx.monitors));
-    debug__write("number of connected monitors: %u", number_of_monitors);
+    debug__writeln("number of connected monitors: %u", number_of_monitors);
     // todo: turn this into column-based format
     for (uint32_t monitor_index = 0; monitor_index < number_of_monitors; ++monitor_index) {
         gfx.monitors[monitor_index] = calloc(1, sizeof(*gfx.monitors[monitor_index]));
@@ -67,7 +67,7 @@ bool gfx__init() {
         int32_t width_mm;
         int32_t height_mm;
         glfwGetMonitorPhysicalSize(monitor->glfw_monitor, &width_mm, &height_mm);
-        debug__write("  %u: %s - physical size: %ux%u [mm]", monitor_index, glfwGetMonitorName(monitor->glfw_monitor), width_mm, height_mm);
+        debug__writeln("  %u: %s - physical size: %ux%u [mm]", monitor_index, glfwGetMonitorName(monitor->glfw_monitor), width_mm, height_mm);
     }
 
     debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
