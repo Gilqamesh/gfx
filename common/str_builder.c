@@ -29,7 +29,7 @@ static void str_builder__ensure_size_left(str_builder_t* self, size_t bytes_to_w
     const size_t necessary_size = self->cur + bytes_to_write - self->start;
     const size_t old_size       = self->end - self->start;
     size_t new_size             = old_size;
-    while (new_size < necessary_size) {
+    while (new_size <= necessary_size) {
         new_size <<= 1;
     }
     

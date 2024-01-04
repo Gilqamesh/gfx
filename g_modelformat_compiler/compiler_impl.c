@@ -449,7 +449,7 @@ static void compiler__emit_chunk_index(compiler_t* self) {
 
 static void decompiler__create(decompiler_t* self, const char* source, size_t source_len) {
     memset(self, 0, sizeof(*self));
-    
+
     self->start = source;
     self->cur   = source;
     self->end   = source + source_len;
@@ -540,16 +540,15 @@ static void decompiler__emit_chunk_position(decompiler_t* self) {
         return ;
     }
     decompiler__femit(self, "positions (\n");
-    size_t current_offset_ahead = sizeof(*header);
     for (uint32_t position_index = 0; position_index < header->n_of_positions; ++position_index) {
+        decompiler__femit(self, "    ");
         const uint32_t expected_position_dimensions = 3;
         for (uint32_t position_dimension_index = 0; position_dimension_index < expected_position_dimensions; ++position_dimension_index) {
-            float* dimension_value = (float*) decompiler__peak(self, current_offset_ahead);
+            float* dimension_value = (float*) decompiler__eat(self, sizeof(*dimension_value));
             if (!dimension_value) {
                 decompiler__err(self, "expected %u more values for position, got: %u", expected_position_dimensions, position_dimension_index);
                 return ;
             }
-            current_offset_ahead += sizeof(float);
             decompiler__femit(self, "%f ", *dimension_value);
         }
         decompiler__femit(self, "\n");
@@ -564,16 +563,15 @@ static void decompiler__emit_chunk_normal(decompiler_t* self) {
         return ;
     }
     decompiler__femit(self, "positions (\n");
-    size_t current_offset_ahead = sizeof(*header);
     for (uint32_t normal_index = 0; normal_index < header->n_of_normals; ++normal_index) {
+        decompiler__femit(self, "    ");
         const uint32_t expected_normal_dimensions = 2;
         for (uint32_t position_dimension_index = 0; position_dimension_index < expected_normal_dimensions; ++position_dimension_index) {
-            float* dimension_value = (float*) decompiler__peak(self, current_offset_ahead);
+            float* dimension_value = (float*) decompiler__eat(self, sizeof(*dimension_value));
             if (!dimension_value) {
                 decompiler__err(self, "expected %u more values for normal, got: %u", expected_normal_dimensions, position_dimension_index);
                 return ;
             }
-            current_offset_ahead += sizeof(float);
             decompiler__femit(self, "%f ", *dimension_value);
         }
         decompiler__femit(self, "\n");
@@ -597,20 +595,21 @@ static void decompiler__emit_chunk_index(decompiler_t* self) {
         decompiler__err(self, "expected index chunk");
         return ;
     }
-    decompiler__femit(self, "indices (\n");
-    size_t current_offset_ahead = sizeof(*header);
+    decompiler__femit(self, "indices (\n    ");
     const uint32_t index_newline_divisor = 3;
     for (uint32_t index_index = 0; index_index < header->n_of_indices; ++index_index) {
-        uint32_t* dimension_value = (uint32_t*) decompiler__peak(self, current_offset_ahead);
+        uint32_t* dimension_value = (uint32_t*) decompiler__eat(self, sizeof(*dimension_value));
         if (!dimension_value) {
             decompiler__err(self, "expected %u indices, got: %u", header->n_of_indices, index_index);
             return ;
         }
-        current_offset_ahead += sizeof(uint32_t);
         decompiler__femit(self, "%u ", *dimension_value);
-        if (index_index > 0 && index_index % index_newline_divisor == 0) {
-            decompiler__femit(self, "\n");
+        if (
+            index_index + 1 < header->n_of_indices &&
+            (index_index + 1) % index_newline_divisor == 0
+        ) {
+            decompiler__femit(self, "\n    ");
         }
     }
-    decompiler__femit(self, ")\n");
+    decompiler__femit(self, "\n)\n");
 }
