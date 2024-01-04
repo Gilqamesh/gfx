@@ -1,0 +1,30 @@
+version 2.3
+positions(
+    2.3 3 -2
+    1.2 4 33
+    12  5 69
+    1   2  3
+)
+indices(
+    0 1 2
+    1 2 3
+    0 1 2
+    1 2 3
+    0 1 2
+    1 2 3
+    0 1 2
+    1 2 3
+    0 1 2
+    1 2 3
+    0 1 2
+    1 2 3
+    0 1 2
+    1 2 3
+)
+
+/* not implemented atm
+textures_2d(
+)
+materials(    
+)
+*/

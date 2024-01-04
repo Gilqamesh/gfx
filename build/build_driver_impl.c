@@ -12,6 +12,7 @@ enum supported_module_name {
     SYSTEM_MODULE,
     GAME_MODULE,
     GFX_MODULE,
+    G_MODELFORMAT_COMPILER_MODULE,
 
     _SUPPORTED_MODULE_NAME_SIZE
 };
@@ -40,6 +41,7 @@ static void supported_module__init_transport_protocol_module(supported_module_t*
 static void supported_module__init_system_module(supported_module_t* self);
 static void supported_module__init_game_module(supported_module_t* self);
 static void supported_module__init_gfx_module(supported_module_t* self);
+static void supported_module__init_g_modelformat_compiler_module(supported_module_t* self);
 
 static compiler_t compiler;
 
@@ -75,6 +77,10 @@ static supported_module_t supported_modules[_SUPPORTED_MODULE_NAME_SIZE] = {
     {
         .dir = "gfx",
         .supported_module__init_and_compile = &supported_module__init_gfx_module
+    },
+    {
+        .dir = "g_modelformat_compiler",
+        .supported_module__init_and_compile = &supported_module__init_g_modelformat_compiler_module
     }
 };
 
@@ -121,6 +127,16 @@ static void supported_module__init_common_module(supported_module_t* self) {
     module_file_t str_builder_file = module__add_file(self->module, "str_builder.c");
     module_file__add_common_cflags(str_builder_file);
     module_file__add_debug_cflags(str_builder_file);
+
+    module_file_t file_file = module__add_file(self->module, "file.c");
+    module_file__add_common_cflags(file_file);
+    module_file__add_debug_cflags(file_file);
+
+    module_file_t libc_file = module__add_file(self->module, "libc.c");
+    module_file__add_common_cflags(libc_file);
+    module_file__add_debug_cflags(libc_file);
+
+    module__append_lflag(self->module, "-lm");
 
     (void) module_file__add_release_cflags;
 
@@ -223,6 +239,7 @@ static void supported_module__init_game_module(supported_module_t* self) {
 
     module__add_supported_dependency(self->module, DEBUG_MODULE);
     module__add_supported_dependency(self->module, SYSTEM_MODULE);
+    module__add_supported_dependency(self->module, GFX_MODULE);
 }
 
 static void supported_module__init_gfx_module(supported_module_t* self) {
@@ -231,14 +248,20 @@ static void supported_module__init_gfx_module(supported_module_t* self) {
     module_file__add_common_cflags(gfx_file);
     module_file__add_debug_cflags(gfx_file);
 
-// #if defined(VULKAN)
-//     module_file__append_cflag(gfx_file, "-DVULKAN");
+#if defined(VULKAN)
+    // module_file__append_cflag(gfx_file, "-DVULKAN");
 
-// #elif defined(OPENGL)
-//     module_file__append_cflag(gfx_file, "-DOPENGL");
-// #else
-// # error "graphics backend must either be defined to "opengl" or "vulkan""
-// #endif
+#elif defined(OPENGL)
+    // module_file__append_cflag(gfx_file, "-DOPENGL");
+    module_file_t glad_file = module__add_file(self->module, "gl/glad/src/glad.c");
+    
+    module_file__add_common_cflags(glad_file);
+    module_file__add_debug_cflags(glad_file);
+
+    module_file__append_cflag(glad_file, "-Igfx/gl/glad/include");
+#else
+# error "graphics backend must either be defined to "opengl" or "vulkan""
+#endif
 
     module_file__append_cflag(gfx_file, GLFW_CFLAGS);
     module__append_lflag(self->module, GLFW_LFLAGS);
@@ -247,6 +270,26 @@ static void supported_module__init_gfx_module(supported_module_t* self) {
     module__append_lflag(self->module, GFX_BACKEND_LFLAGS);
 
     module__add_supported_dependency(self->module, DEBUG_MODULE);
+}
+
+static void supported_module__init_g_modelformat_compiler_module(supported_module_t* self) {
+    module_file_t compiler_file = module__add_file(self->module, "compiler.c");
+
+    module_file__add_common_cflags(compiler_file);
+    module_file__add_debug_cflags(compiler_file);
+
+    module_file_t scan_file = module__add_file(self->module, "scan.c");
+
+    module_file__add_common_cflags(scan_file);
+    module_file__add_debug_cflags(scan_file);
+
+    if (self->is_link_option) {
+        module_file_t driver_file = module__add_file(self->module, "driver.c");
+        module_file__add_common_cflags(driver_file);
+        module_file__add_debug_cflags(driver_file);
+    }
+
+    module__add_supported_dependency(self->module, COMMON_MODULE);
 }
 
 static void supported_module__init_and_compile_wrapper(supported_module_t* self) {

@@ -1,5 +1,9 @@
 #include "glad/include/glad/glad.h"
 
+#include "file.h"
+
+#include <string.h>
+
 #include "gl_impl.c"
 
 bool gl__init_context() {
@@ -38,7 +42,7 @@ const char* gl__get_extension_str(uint32_t index) {
 }
 
 void gl_buffer__create(
-    gl_buffer_t* self, const char* debug_name,
+    gl_buffer_t* self,
     const void* data, uint32_t size,
     gl_buffer_type_t buffer_type, gl_buffer_access_type_t access_type
 ) {
@@ -60,7 +64,6 @@ void gl_buffer__create(
         );
     }
 
-    glObjectLabel(gl_object_label__from_buffer_type(buffer_type), self->id, -1, debug_name);
     gl_buffer__unbind(self);
 }
 
@@ -220,6 +223,17 @@ bool shader_program__create(shader_program_t* self) {
     if (self->id == 0) {
         return false;
     }
+    glProgramParameteri(self->id, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+
+    return true;
+}
+
+bool shader_program__create_from_shader_program_binary(shader_program_t* self, shader_program_binary_t* shader_program_binary) {
+    if (!shader_program__create(self)) {
+        return false;
+    }
+
+    glProgramBinary(self->id, shader_program_binary->format, shader_program_binary->binary, shader_program_binary->binary_size);
 
     return true;
 }
@@ -256,20 +270,23 @@ bool shader_program__link(shader_program_t* self) {
     return true;
 }
 
-void shader_program__bind(shader_program_t* self) {
-    glUseProgram(self->id);
+bool shader_program_binary__create(shader_program_binary_t* self, shader_program_t* linked_shader_program) {
+    glGetProgramiv(linked_shader_program->id, GL_PROGRAM_BINARY_LENGTH, (GLint*) &self->binary_size);
+    self->binary = malloc(self->binary_size);
+    if (!self->binary) {
+        return false;
+    }
+    glGetProgramBinary(linked_shader_program->id, self->binary_size, 0, &self->format, self->binary);
+
+    return true;
 }
 
-vertex_specification_t vertex_specification(gl_type_t component_type, gl_channel_count_t component_channel_count, bool normalized) {
-    ASSERT(
-        (component_type != GL_TYPE_R32) ||
-        (component_type == GL_TYPE_R32 && !normalized)
-    );
-    return (vertex_specification_t) {
-        .component_type       = component_type,
-        .number_of_components = gl_channel_count__to_size(component_channel_count),
-        .normalized           = normalized ? GL_TRUE : GL_FALSE
-    };
+void shader_program_binary__destroy(shader_program_binary_t* self) {
+    free(self->binary);
+}
+
+void shader_program__bind(shader_program_t* self) {
+    glUseProgram(self->id);
 }
 
 vertex_stream_specification_t vertex_stream_specification(uint32_t number_of_vertices, primitive_type_t primitive_type, uint32_t starting_vertex_offset) {
@@ -280,98 +297,85 @@ vertex_stream_specification_t vertex_stream_specification(uint32_t number_of_ver
     };
 }
 
-bool geometry_object__create(geometry_object_t* self) {
+void geometry_object__create(geometry_object_t* self) {
     memset(self, 0, sizeof(*self));
 
     glCreateVertexArrays(1, &self->id);
-    if (self->id == 0) {
+}
+
+bool geometry_object__create_from_file(geometry_object_t* self, const char* file_path) {
+    // parse extension and decide to use custom format or not
+    char* dot_pos = strrchr(file_path, '.');
+    if (!dot_pos) {
+        return false;
+    }
+    if (strcmp(dot_pos, ".g_modelformat")) {
         return false;
     }
 
-    return true;
+    size_t file_size = 0;
+    if (!file__size(file_path, &file_size)) {
+        return false;
+    }
+
+    file_t file;
+    if (!file__open(&file, file_path, FILE_ACCESS_MODE_READ, FILE_CREATION_MODE_OPEN)) {
+        return false;
+    }
+
+    char* buffer = malloc(file_size);
+    size_t bytes_read = 0;
+    if (!file__read(&file, buffer, file_size, &bytes_read)) {
+        file__close(&file);
+        free(buffer);
+        return false;
+    }
+
+    geometry_object__create(self);
+    bool result = geometry_object__load_from_g_modelformat(self, buffer, file_size);
+
+    file__close(&file);
+    free(buffer);
+
+    return result;
 }
 
 void geometry_object__destroy(geometry_object_t* self) {
     glDeleteVertexArrays(1, &self->id);
 }
 
-bool geometry_object__attach_vertex(
-    geometry_object_t* self,
-    gl_buffer_t* gl_buffer,
-    vertex_specification_t vertex_specification,
-    uint32_t offset_of_vertex_in_gl_buffer,
-    uint32_t stride_to_next_vertex_in_gl_buffer
-) {
-    ASSERT(vertex_specification.number_of_components > 0);
-    ASSERT(offset_of_vertex_in_gl_buffer + (vertex_specification.number_of_components - 1) * stride_to_next_vertex_in_gl_buffer + gl_type__to_size(vertex_specification.component_type) <= gl_buffer->size);
-
-    geometry_object__bind(self);
-
-    GLint max_number_of_vertex_attributes = 0;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &max_number_of_vertex_attributes);
-    int32_t vertex_attribute_to_enable = -1;
-    for (int32_t vertex_attribute_index = 0; vertex_attribute_index < max_number_of_vertex_attributes; ++vertex_attribute_index) {
-        GLint result = 0;
-        glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &result);
-        if (result == 0) {
-            vertex_attribute_to_enable = vertex_attribute_index;
-            break ;
-        }
-    }
-    if (vertex_attribute_to_enable == -1) {
-        debug__write_and_flush(DEBUG_MODULE_GL, DEBUG_ERROR, "cannot enable more vertex attributes for geometry object");
-        geometry_object__unbind(self);
-        return false;
-    }
-    gl_buffer__bind(gl_buffer);
-    glEnableVertexAttribArray(vertex_attribute_to_enable);
-    glVertexAttribPointer(
-        vertex_attribute_to_enable,
-        vertex_specification.number_of_components,
-        gl_type__to_gl(vertex_specification.component_type),
-        vertex_specification.normalized,
-        stride_to_next_vertex_in_gl_buffer,
-        (void*) (size_t) offset_of_vertex_in_gl_buffer
+void geometry_object__define_vertex_attribute_format(geometry_object_t* self, uint32_t attribute_index, gl_type_t components_type, gl_channel_count_t number_of_components, bool normalize) {
+    glVertexArrayAttribFormat(
+        self->id,
+        attribute_index,
+        gl_channel_count__to_size(number_of_components),
+        gl_type__to_gl(components_type),
+        normalize,
+        0
     );
+}
 
-    geometry_object__unbind(self);
-    gl_buffer__unbind(gl_buffer);
+void geometry_object__enable_vertex_attribute_format(geometry_object_t* self, uint32_t attribute_index, bool enable) {
+    GLint result = 0;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &result);
+    ASSERT(attribute_index < (uint32_t) result);
 
-    /**
-     * Separate the vertex buffer source from the vertex format:
-     * 
-     * Vertex attributes are a state of the vertex array
-     * Vertex buffer bindings is a state of the vertex buffer
-     * 
-     * // set a binding that a vertex attribute uses to reference a buffer
-     * glVertexArrayAttribBinding(
-     *  vao,                           // Vertex array object id
-     *  vertex_array_attrib_index,     // Vertex array's vertex attribute to use to create the association
-     *  vertex_buffer_binding_index    // Vertex buffer binding with which to associate the vertex attribute with
-     * );
-     * 
-     * // bind vertex buffer to vao 
-     * glVertexArrayVertexBuffer(
-     *  vao,
-     *  binding index,
-     *  buffer id,
-     *  offset,
-     *  stride
-     * );
-     * 
-     * glVertexArrayAttribFormat(
-     *  vao,
-     *  attrib index,
-     *  n of components,
-     *  type,
-     *  normalized,
-     *  relativeoffset
-     * );
-     * 
-     * glEnableVertexAttribArray();
-    */
+    if (enable) {
+        glEnableVertexArrayAttrib(self->id, attribute_index);
+    } else {
+        glDisableVertexArrayAttrib(self->id, attribute_index);
+    }
+}
 
-    return true;
+void geometry_object__set_vertex_buffer_for_binding(geometry_object_t* self, gl_buffer_t* vertex_buffer, uint32_t binding_index, uint32_t offset_to_first_vertex, uint32_t stride) {
+    GLint result = 0;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIB_BINDINGS, &result);
+    ASSERT(binding_index < (uint32_t) result);
+    glVertexArrayVertexBuffer(self->id, binding_index, vertex_buffer->id, offset_to_first_vertex, stride);
+}
+
+void geometry_object__associate_binding(geometry_object_t* self, uint32_t attribute_index, uint32_t vertex_binding_index) {
+    glVertexArrayAttribBinding(self->id, attribute_index, vertex_binding_index);
 }
 
 bool geometry_object__attach_index_buffer(geometry_object_t* self, gl_buffer_t* index_buffer) {
@@ -396,18 +400,22 @@ void geometry_object__draw(geometry_object_t* self, shader_program_t* shader, ve
     shader_program__bind(shader);
 
     if (self->has_index_buffer) {
-        glDrawElementsBaseVertex(
+        glDrawElementsInstancedBaseVertexBaseInstance(
             primitive_type__to_gl(vertex_stream_specification.primitive_type),
             vertex_stream_specification.number_of_vertices,
             GL_UNSIGNED_INT,
             0,
-            vertex_stream_specification.starting_vertex_offset
+            1,
+            vertex_stream_specification.starting_vertex_offset,
+            0
         );
     } else {
-        glDrawArrays(
+        glDrawArraysInstancedBaseInstance(
             primitive_type__to_gl(vertex_stream_specification.primitive_type),
             vertex_stream_specification.starting_vertex_offset,
-            vertex_stream_specification.number_of_vertices
+            vertex_stream_specification.number_of_vertices,
+            1,
+            0
         );
     }
 

@@ -7,15 +7,18 @@ build_cflags := \
 	-DGLFW_CFLAGS="\"$(shell pkg-config --cflags glfw3)\"" \
 	-DGLFW_LFLAGS="\"$(shell pkg-config --static --libs glfw3)\""
 build_lflags := 
-build_obj := $(build_src:.c=.o) $(common_obj)
+build_obj := $(build_src:.c=.o)
 build_dps := $(build_src:.c=.d)
 
 ifeq ($(gfx_backend), opengl)
 	build_cflags += \
+		-DOPENGL \
 		-DGFX_BACKEND_CFLAGS="\"-DOPENGL\"" \
 		-DGFX_BACKEND_LFLAGS="\"$(shell pkg-config --static --libs gl)\""
+	
 else ifeq ($(gfx_backend), vulkan)
 	build_cflags += \
+		-DVULKAN \
 		-DGFX_BACKEND_CFLAGS="\"-DVULKAN\"" \
 		-DGFX_BACKEND_LFLAGS="\"$(shell pkg-config --static --libs vulkan)\""
 else

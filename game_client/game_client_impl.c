@@ -1,10 +1,8 @@
 struct         loop_stage;
 struct         frame_info;
-struct         image;
 struct         sent_packet;
 typedef struct loop_stage  loop_stage_t;
 typedef struct frame_info  frame_info_t;
-typedef struct image       image_t;
 typedef struct sent_packet sent_packet_t;
 
 struct frame_info {
@@ -13,7 +11,6 @@ struct frame_info {
     double       time_render_actual;
     double       time_start;
     double       time_end;
-    double       time_frame_expected;
     uint32_t     number_of_updates;
 };
 
@@ -21,12 +18,6 @@ struct loop_stage {
     double   time_start;
     double   time_elapsed;
     bool     (*loop_stage__execute)(struct loop_stage* self, game_client_t game_client);
-};
-
-struct image {
-    uint8_t* data;
-    uint32_t w;
-    uint32_t h;
 };
 
 struct sent_packet {
@@ -38,9 +29,7 @@ struct game_client {
     game_client_config_t config;
     tp_socket_t          tp_socket;
 
-    cursor_t       cursor;
-    image_t        window_icon_image;
-    image_t        cursor_image;
+    window_t       window;
 
     connection_t   connection;
     seq_id_t       sequence_id;
@@ -57,6 +46,7 @@ struct game_client {
     double         frames_lost;
     double         time_game_update_fixed;
     double         time_update_to_process;
+    double         time_frame_expected;
     uint32_t       loop_stages_top;
     uint32_t       loop_stages_size;
     loop_stage_t*  loop_stages;
@@ -70,9 +60,9 @@ struct game_client {
 static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_client_t game_client);
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_client_t game_client);
 static bool loop_stage__update_loop(loop_stage_t* self, game_client_t game_client);
+static bool loop_stage__render(loop_stage_t* self, game_client_t game_client);
 static bool loop_stage__sleep_till_end_of_frame(loop_stage_t* self, game_client_t game_client);
 
-static bool game_client__load_images(game_client_t self);
 static void game_client__sample_prev_frame(game_client_t self);
 static void game_client__push_stage(game_client_t self, bool (*stage_fn)(struct loop_stage* self, game_client_t game_client));
 static void game_client__ack_packet(game_client_t self, connection_t* connection, packet_t* packet, double time);
@@ -94,9 +84,9 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
     game_client->previous_frame_info.elapsed_time       = game_client->previous_frame_info.time_end - game_client->previous_frame_info.time_start;
     game_client->previous_frame_info.time_render_actual = game_client->previous_frame_info.time_render_actual;
 
-    const double expected_time_lost_this_frame = game_client->previous_frame_info.elapsed_time - game_client->previous_frame_info.time_frame_expected;
+    const double expected_time_lost_this_frame = game_client->previous_frame_info.elapsed_time - game_client->time_frame_expected;
     game_client->time_lost              += expected_time_lost_this_frame;
-    game_client->frames_lost            += expected_time_lost_this_frame / game_client->previous_frame_info.time_frame_expected;
+    game_client->frames_lost            += expected_time_lost_this_frame / game_client->time_frame_expected;
     game_client->time_update_to_process += game_client->previous_frame_info.elapsed_time;
 
     game_client__sample_prev_frame(game_client);
@@ -108,7 +98,6 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
     // if (0) {
         seconds_last_info_printed = seconds_since_loop_start;
         double time_frame_actual_avg             = 0.0;
-        double time_frame_expected_avg           = 0.0;
         double time_update_actual_avg            = 0.0;
         double time_render_actual_avg            = 0.0;
         double number_of_updates_avg             = 0.0;
@@ -117,7 +106,6 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
         while (sample_index != (int32_t) game_client->frame_info_sample_index_head) {
             frame_info_t* frame_info = &game_client->frame_info_sample[sample_index];
             time_frame_actual_avg    += frame_info->elapsed_time;
-            time_frame_expected_avg  += frame_info->time_frame_expected;
             time_update_actual_avg   += frame_info->time_update_actual;
             time_render_actual_avg   += frame_info->time_render_actual;
             number_of_updates_avg    += frame_info->number_of_updates;
@@ -130,7 +118,6 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
         }
         if (frame_samples_count > 0) {
             time_frame_actual_avg    /= frame_samples_count;
-            time_frame_expected_avg  /= frame_samples_count;
             time_update_actual_avg   /= frame_samples_count;
             time_render_actual_avg   /= frame_samples_count;
             number_of_updates_avg    /= frame_samples_count;
@@ -142,11 +129,11 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
             debug__writeln("  Game updates:            %lf", number_of_updates_avg);
             debug__writeln("  Time:");
             debug__writeln("    Total:                 %lfs", game_client->previous_frame_info.time_end);
-            debug__writeln("    Game update actual:    %lfus", time_update_actual_avg * 1000000);
-            debug__writeln("    Game update fixed:     %lfus", game_client->time_game_update_fixed * 1000000);
-            debug__writeln("    Render actual:         %lfus", time_render_actual_avg * 1000000);
+            debug__writeln("    Game update actual:    %lfus", time_update_actual_avg * 1000000.0);
+            debug__writeln("    Game update fixed:     %lfus", game_client->time_game_update_fixed * 1000000.0);
+            debug__writeln("    Render actual:         %lfus", time_render_actual_avg * 1000000.0);
             debug__writeln("    Frame actual:          %lfms, %lffps", time_frame_actual_avg * 1000.0, 1.0 / time_frame_actual_avg);
-            debug__writeln("    Frame expected:        %lfms, %lffps", time_frame_expected_avg * 1000.0, 1.0 / time_frame_expected_avg);
+            debug__writeln("    Frame expected:        %lfms, %lffps", game_client->time_frame_expected * 1000.0, 1.0 / game_client->time_frame_expected);
             debug__writeln("    Left to process:       %lfms", (game_client->time_update_to_process - game_client->previous_frame_info.elapsed_time) * 1000.0);
             connection_t* connection = &game_client->connection;
             if (connection->connected) {
@@ -169,6 +156,12 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
 }
 
 static bool loop_stage__poll_inputs(loop_stage_t* self, game_client_t game_client) {
+    gfx__poll_events();
+    if (window__get_should_close(game_client->window)) {
+        return false;
+    }
+    game__frame_start(game_client->game_state);
+
     game_client__receive_packets(game_client, self->time_start);
     game_client__send_packet(game_client, self->time_start);
 
@@ -185,7 +178,7 @@ static bool loop_stage__update_loop(loop_stage_t* self, game_client_t game_clien
     game_client->previous_frame_info.number_of_updates = game_client->time_update_to_process / game_client->time_game_update_fixed;
     game_client->time_update_to_process -= game_client->previous_frame_info.number_of_updates * game_client->time_game_update_fixed;
     for (uint32_t game_updates_count = 0; game_updates_count < game_client->previous_frame_info.number_of_updates; ++game_updates_count) {
-        game__update(game_client->game_state, game_client->time_game_update_fixed);
+        game__update(game_client->game_state, window__get_controller(game_client->window), game_client->time_game_update_fixed);
     }
     double time_end = system__get_time();
     game_client->previous_frame_info.time_update_actual = (time_end - self->time_start) / game_client->previous_frame_info.number_of_updates;
@@ -193,28 +186,26 @@ static bool loop_stage__update_loop(loop_stage_t* self, game_client_t game_clien
     return true;
 }
 
+static bool loop_stage__render(loop_stage_t* self, game_client_t game_client) {
+    ASSERT(game_client->time_update_to_process < game_client->time_frame_expected);
+    const double render_interpolation_factor = 1.0 - game_client->time_update_to_process / game_client->time_frame_expected;
+    ASSERT(render_interpolation_factor >= 0.0 && render_interpolation_factor <= 1.0);
+    game__render(game_client->game_state, render_interpolation_factor);
+    window__swap_buffers(game_client->window);
+
+    game_client->previous_frame_info.time_render_actual = system__get_time() - self->time_start;
+
+    return true;
+}
+
 static bool loop_stage__sleep_till_end_of_frame(loop_stage_t* self, game_client_t game_client) {
-    const double time_mark_end_frame     = game_client->loop_stages[0].time_start + game_client->previous_frame_info.time_frame_expected;
+    const double time_mark_end_frame     = game_client->loop_stages[0].time_start + game_client->time_frame_expected;
     const double time_till_end_of_frame  = time_mark_end_frame - self->time_start;
     if (time_till_end_of_frame > 0.0) {
         system__sleep(time_till_end_of_frame);
     }
 
     ++game_client->current_frame;
-
-    return true;
-}
-
-static bool game_client__load_images(game_client_t self) {
-    int number_of_channels_per_pixel;
-    self->window_icon_image.data = stbi_load("game/assets/icon.png", (int32_t*) &self->window_icon_image.w, (int32_t*) &self->window_icon_image.h, &number_of_channels_per_pixel, 0);
-    if (!self->window_icon_image.data) {
-        return false;
-    }
-    self->cursor_image.data = stbi_load("game/assets/cursor.png", (int32_t*) &self->cursor_image.w, (int32_t*) &self->cursor_image.h, &number_of_channels_per_pixel, 0);
-    if (!self->cursor_image.data) {
-        return false;
-    }
 
     return true;
 }

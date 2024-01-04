@@ -1,7 +1,19 @@
-struct         controller;
+struct         button_state;
 struct         gfx;
-typedef struct controller controller_t;
-typedef struct gfx        gfx_t;
+typedef struct button_state button_state_t;
+typedef struct gfx          gfx_t;
+
+struct button_state {
+    uint32_t n_of_transitions;
+    uint32_t n_of_repeats;
+    void     (*action_on_button_down)(void*);
+    void*    user_pointer;
+    bool     ended_down;
+
+    /**
+     * @todo: add state for shortcut customization
+     */
+};
 
 struct controller {
     const char*    name;
@@ -9,6 +21,8 @@ struct controller {
     bool           is_connected;
     bool           received_button_input;
     float          axes[ARRAY_SIZE(((GLFWgamepadstate*)(0))->axes)];
+    double         cursor_x;
+    double         cursor_y;
 };
 
 struct gfx {
@@ -24,8 +38,6 @@ struct gfx {
     monitor_t* monitors;
     uint32_t   monitors_top;
     uint32_t   monitors_size;
-
-    window_t current_window;
 };
 
 struct monitor {
@@ -62,7 +74,8 @@ static gfx_t gfx;
 
 static void gfx__pre_poll_events();
 static void gfx__post_poll_events();
-static void gfx__post_poll_event_poll_controllers();
+//! TODO: maybe expose this to the API, so that controllers can be polled more frequently
+static void gfx__poll_controllers();
 static void gfx__post_poll_event_handle_window_display_state_transitions();
 static void gfx__error_callback(int code, const char* description);
 static void gfx__monitor_callback(GLFWmonitor* monitor, int event);
@@ -129,11 +142,11 @@ static void gfx__pre_poll_events() {
 }
 
 static void gfx__post_poll_events() {
-    gfx__post_poll_event_poll_controllers();
+    gfx__poll_controllers();
     gfx__post_poll_event_handle_window_display_state_transitions();
 }
 
-static void gfx__post_poll_event_poll_controllers() {
+static void gfx__poll_controllers() {
     static button_t glfw_gamepad_button_to_button[ARRAY_SIZE(((GLFWgamepadstate*)(0))->buttons)] = {
         [GLFW_GAMEPAD_BUTTON_A]             = BUTTON_GAMEPAD_A,
         [GLFW_GAMEPAD_BUTTON_B]             = BUTTON_GAMEPAD_B,
@@ -152,11 +165,11 @@ static void gfx__post_poll_event_poll_controllers() {
         [GLFW_GAMEPAD_BUTTON_DPAD_LEFT]     = BUTTON_GAMEPAD_DPAD_LEFT
     };
     static button_t glfw_gamepad_axis_to_button[ARRAY_SIZE(((GLFWgamepadstate*)(0))->axes)] = {
-        [GLFW_GAMEPAD_AXIS_LEFT_X] = BUTTON_GAMEPAD_AXIS_LEFT_X,
-        [GLFW_GAMEPAD_AXIS_LEFT_Y] = BUTTON_GAMEPAD_AXIS_LEFT_Y,
-        [GLFW_GAMEPAD_AXIS_RIGHT_X] = BUTTON_GAMEPAD_AXIS_RIGHT_X,
-        [GLFW_GAMEPAD_AXIS_RIGHT_Y] = BUTTON_GAMEPAD_AXIS_RIGHT_Y,
-        [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] = BUTTON_GAMEPAD_AXIS_LEFT_TRIGGER,
+        [GLFW_GAMEPAD_AXIS_LEFT_X]        = BUTTON_GAMEPAD_AXIS_LEFT_X,
+        [GLFW_GAMEPAD_AXIS_LEFT_Y]        = BUTTON_GAMEPAD_AXIS_LEFT_Y,
+        [GLFW_GAMEPAD_AXIS_RIGHT_X]       = BUTTON_GAMEPAD_AXIS_RIGHT_X,
+        [GLFW_GAMEPAD_AXIS_RIGHT_Y]       = BUTTON_GAMEPAD_AXIS_RIGHT_Y,
+        [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER]  = BUTTON_GAMEPAD_AXIS_LEFT_TRIGGER,
         [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] = BUTTON_GAMEPAD_AXIS_RIGHT_TRIGGER
     };
     for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(gfx.controller); ++controller_index) {
@@ -594,14 +607,14 @@ static void window__utf32_callback(GLFWwindow* window, uint32_t utf32) {
 }
 
 static void window__add_default_button_actions(window_t self) {
-    window__button_register_action(self, BUTTON_WINDOW_CLOSE, (void*) self, &window__button_default_action_window_close);
-    window__button_register_action(self, BUTTON_WINDOW_MINIMIZE, (void*) self, &window__button_default_action_window_minimize);
-    window__button_register_action(self, BUTTON_WINDOW_MAXIMIZE, (void*) self, &window__button_default_action_window_maximize);
-    window__button_register_action(self, BUTTON_WINDOW_WINDOWED, (void*) self, &window__button_default_action_window_windowed);
-    window__button_register_action(self, BUTTON_WINDOW_FULL_SCREEN, (void*) self, &window__button_default_action_window_full_screen);
-    window__button_register_action(self, BUTTON_DEBUG_INFO_MESSAGE_TOGGLE, (void*) self, &window__button_default_action_debug_info_message_toggle);
-    window__button_register_action(self, BUTTON_GET_CLIPBOARD, (void*) self, &window__button_default_action_get_clipboard);
-    window__button_register_action(self, BUTTON_SET_CLIPBOARD, (void*) self, &window__button_default_action_set_clipboard);
+    controller__button_register_action(&self->controller, BUTTON_WINDOW_CLOSE, (void*) self, &window__button_default_action_window_close);
+    controller__button_register_action(&self->controller, BUTTON_WINDOW_MINIMIZE, (void*) self, &window__button_default_action_window_minimize);
+    controller__button_register_action(&self->controller, BUTTON_WINDOW_MAXIMIZE, (void*) self, &window__button_default_action_window_maximize);
+    controller__button_register_action(&self->controller, BUTTON_WINDOW_WINDOWED, (void*) self, &window__button_default_action_window_windowed);
+    controller__button_register_action(&self->controller, BUTTON_WINDOW_FULL_SCREEN, (void*) self, &window__button_default_action_window_full_screen);
+    controller__button_register_action(&self->controller, BUTTON_DEBUG_INFO_MESSAGE_TOGGLE, (void*) self, &window__button_default_action_debug_info_message_toggle);
+    controller__button_register_action(&self->controller, BUTTON_GET_CLIPBOARD, (void*) self, &window__button_default_action_get_clipboard);
+    controller__button_register_action(&self->controller, BUTTON_SET_CLIPBOARD, (void*) self, &window__button_default_action_set_clipboard);
 }
 
 static void window__button_default_action_window_close(void* user_pointer) {
@@ -664,9 +677,8 @@ static void window__button_default_action_set_clipboard(void* user_pointer) {
 
 static void window__cursor_pos_callback(GLFWwindow* glfw_window, double x, double y) {
     window_t window = window__from_glfw_window(glfw_window);
-    (void) window;
-    (void) x;
-    (void) y;
+    window->controller.cursor_x = x;
+    window->controller.cursor_y = y;
 }
 
 static void window__button_process_input(window_t self, button_t button, bool is_pressed) {

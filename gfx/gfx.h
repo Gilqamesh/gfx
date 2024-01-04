@@ -155,16 +155,16 @@ const char* window__get_clipboard(window_t self);
 void window__set_clipboard(window_t self, const char* str);
 
 /********************************************************************************
- * Virtual button API
+ * Controller and Virtual button API
  ********************************************************************************/
 
 /**
  * @brief Virtual button, each window has its own button state
  */
 enum           button;
-struct         button_state;
-typedef enum   button       button_t;
-typedef struct button_state button_state_t;
+struct         controller;
+typedef enum   button     button_t;
+typedef struct controller controller_t;
 
 enum button {
     BUTTON_0, BUTTON_1, BUTTON_2, BUTTON_3, BUTTON_4, BUTTON_5, BUTTON_6, BUTTON_7, BUTTON_8, BUTTON_9,
@@ -205,26 +205,18 @@ enum button {
     _BUTTON_SIZE
 };
 
-struct button_state {
-    uint32_t n_of_transitions;
-    uint32_t n_of_repeats;
-    void     (*action_on_button_down)(void*);
-    void*    user_pointer;
-    bool     ended_down;
-
-    /**
-     * @todo: add state for shortcut customization
-     */
-};
+controller_t* window__get_controller(window_t self);
 
 // @brief current state of button
-bool window__button_is_down(window_t self, button_t button);
-uint32_t window__button_n_of_repeats(window_t self, button_t button);
+bool controller__button_is_down(controller_t* self, button_t button);
+uint32_t controller__button_n_of_repeats(controller_t* self, button_t button);
 
 // @brief number of press/release transitions
-uint32_t window__button_n_of_transitions(window_t self, button_t button);
+uint32_t controller__button_n_of_transitions(controller_t* self, button_t button);
 
-void window__button_register_action(window_t self, button_t button, void* user_pointer, void (*action_on_button_down)(void*));
+void controller__get_cursor_pos(controller_t* self, double* x, double* y);
+
+void controller__button_register_action(controller_t* self, button_t button, void* user_pointer, void (*action_on_button_down)(void*));
 
 /********************************************************************************
  * Cursor API
@@ -251,9 +243,6 @@ enum cursor_state {
 
 void window__set_cursor_state(window_t self, cursor_state_t state);
 cursor_state_t window__get_cursor_state(window_t self);
-
-void window__set_cursor_pos(window_t self, double x, double y);
-void window__get_cursor_pos(window_t self, double* x, double* y);
 
 cursor_t cursor__create(uint8_t* pixels, uint32_t w, uint32_t h);
 void cursor__destroy(cursor_t cursor);

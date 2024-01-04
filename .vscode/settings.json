@@ -159,7 +159,9 @@
         "gfx_math.h": "c",
         "socket.h": "c",
         "*.tcc": "c",
-        "timesize.h": "c"
+        "timesize.h": "c",
+        "khrplatform.h": "c",
+        "time.h": "c"
     },
     "C_Cpp.default.compilerPath": "/usr/bin/gcc",
     "C_Cpp.errorSquiggles": "disabled"

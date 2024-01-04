@@ -3,11 +3,20 @@
 #include <math.h>
 #include <assert.h>
 
+#include "file.h"
+
 int main() {
-    uint8_t a = 12;
-    uint32_t b = 32;
-    uint8_t res = (uint8_t) (a - b);
-    printf("%u\n", res);
+    file_t file;
+    if (!file__open(&file, "idk", FILE_ACCESS_MODE_WRITE, FILE_CREATION_MODE_CREATE)) {
+        return 1;
+    }
+    size_t bytes_written = 0;
+    if (!file__fwrite(&file, &bytes_written, "%s", "hi")) {
+        return 2;
+    }
+    printf("Bytes written: %u\n", bytes_written);
+
+    file__close(&file);
 
     return 0;
 }

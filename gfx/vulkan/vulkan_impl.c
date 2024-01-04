@@ -891,8 +891,8 @@ static bool vk__create_render_pass() {
 
 static bool vk__create_gfx_pipeline() {
     const char* shader_paths[] = {
-        "shaders/vert.spv",
-        "shaders/frag.spv"
+        "game/shaders/vert.spv",
+        "game/shaders/frag.spv"
     };
 
     VkShaderStageFlagBits vk_shader_stage_flag_bits[] = {

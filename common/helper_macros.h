@@ -23,14 +23,14 @@
 # define TERABYTES(bytes) (GIGABYTES(bytes) * 1024LL)
 
 // todo: create dynamic array module
-#define ARRAY_ENSURE_TOP(array, array_top, array_size) do { \
+#define ARRAY_ENSURE_TOP(array_p, array_top, array_size) do { \
     if ((array_top) >= (array_size)) { \
         if ((array_size) == 0) { \
             (array_size) = 8; \
-            (array) = malloc((array_size) * sizeof((array)[0])); \
+            (array_p) = malloc((array_size) * sizeof((array_p)[0])); \
         } else { \
             (array_size) <<= 1; \
-            (array) = realloc((array), (array_size) * sizeof((array)[0])); \
+            (array_p) = realloc((array_p), (array_size) * sizeof((array_p)[0])); \
         } \
     } \
 } while (0)

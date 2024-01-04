@@ -13,9 +13,7 @@
 bool debug__init_module() {
     memset(&debug, 0, sizeof(debug));
 
-    const uint32_t str_builder_memory_size = KILOBYTES(4);
-    void* str_builder_memory = malloc(str_builder_memory_size);
-    str_builder__create(&debug.str_builder, str_builder_memory, str_builder_memory_size);
+    str_builder__create(&debug.str_builder);
 
     for (uint32_t error_level_availability_index = 0; error_level_availability_index < _DEBUG_MESSAGE_TYPE_SIZE; ++error_level_availability_index) {
         debug.error_level_availability[error_level_availability_index] = true;
@@ -39,16 +37,15 @@ void debug__deinit_module() {
         debug.error_file = 0;
     }
 
-    if (debug.str_builder.start) {
-        free(debug.str_builder.start);
-    }
+
+    str_builder__destroy(&debug.str_builder);
 }
 
 void debug__write_raw(const char* format, ...) {
     va_list ap;
     va_start(ap, format);
 
-    str_builder__vappend(&debug.str_builder, format, ap);
+    str_builder__vfappend(&debug.str_builder, format, ap);
 
     va_end(ap);
 }

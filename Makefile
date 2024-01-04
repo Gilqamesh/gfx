@@ -9,7 +9,8 @@ cc = gcc
 #TODO: embed this for compilation of 'build' module
 
 # # vulkan, opengl
-gfx_backend := vulkan
+gfx_backend := opengl
+# gfx_backend := vulkan
 
 # debug, release
 build_mode = debug
@@ -19,10 +20,14 @@ build_mode = debug
 common_dir := common
 common_src := \
 	$(common_dir)/hash_set.c \
-	$(common_dir)/hash_map.c
+	$(common_dir)/hash_map.c \
+	$(common_dir)/libc.c\
+	$(common_dir)/file.c\
+	$(common_dir)/str_builder.c
 common_dps := $(common_src:.c=.d)
 common_obj := $(common_src:.c=.o)
 common_cflags := -I$(common_dir)
+common_lflags :=
 ifeq ($(build_mode), debug)
 	common_cflags += -DDEBUG -g -O0 -Wall -Wextra -Werror
 else ifeq ($(build_mode), release)

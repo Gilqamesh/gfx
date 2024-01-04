@@ -1,4 +1,4 @@
-#include "matrix.h"
+#include "vec_math.h"
 
 #include <stdio.h>
 #include <stdint.h>

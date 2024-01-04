@@ -44,15 +44,15 @@ static const char* debug_module__to_str(debug_module_t module) {
 static void debug__vwriteln(const char* format, va_list ap) {
     const char* line_prefix = "  ";
     if (debug.number_of_lines == 1) {
-        str_builder__prepend(&debug.str_builder, "%s", line_prefix);
+        str_builder__fprepend(&debug.str_builder, "%s", line_prefix);
     }
 
     if (debug.number_of_lines > 0) {
-        str_builder__append(&debug.str_builder, "%s", line_prefix);
+        str_builder__fappend(&debug.str_builder, "%s", line_prefix);
     }
 
-    str_builder__vappend(&debug.str_builder, format, ap);
-    str_builder__append(&debug.str_builder, "\n");
+    str_builder__vfappend(&debug.str_builder, format, ap);
+    str_builder__fappend(&debug.str_builder, "\n");
 
     ++debug.number_of_lines;
 }

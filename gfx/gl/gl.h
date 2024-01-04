@@ -131,7 +131,7 @@ struct attached_buffer_depth_stencil {
  * @param data used to initialize the buffer, if NULL, the buffer will be uninitialized
 */
 void gl_buffer__create(
-    gl_buffer_t* self, const char* debug_name,
+    gl_buffer_t* self,
     const void* data, uint32_t size,
     gl_buffer_type_t buffer_type, gl_buffer_access_type_t access_type
 );
@@ -200,26 +200,19 @@ void attached_buffer_depth_stencil__clearfi(attached_buffer_depth_stencil_t* sel
  * Shader API
  ********************************************************************************/
 
-// todo: 4.1 https://www.khronos.org/opengl/wiki/Shader_Compilation#Binary_upload
-
 struct         shader_object;
 enum           shader_type;
 struct         shader_program;
-typedef struct shader_object       shader_object_t;
-typedef enum   shader_type         shader_type_t;
-typedef struct shader_program      shader_program_t;
+struct         shader_program_binary;
+typedef struct shader_object         shader_object_t;
+typedef enum   shader_type           shader_type_t;
+typedef struct shader_program        shader_program_t;
+typedef struct shader_program_binary shader_program_binary_t;
 
 /**
  * @brief Intermediate binary representation of a shader
 */
 struct shader_object {
-    uint32_t id;
-};
-
-/**
- * @brief Program that can run on the GPU
-*/
-struct shader_program {
     uint32_t id;
 };
 
@@ -232,12 +225,25 @@ enum shader_type {
     SHADER_TYPE_COMPUTE
 };
 
+/**
+ * @brief Program that can run on the GPU
+*/
+struct shader_program {
+    uint32_t id;
+};
+
+struct shader_program_binary {
+    uint32_t format;
+    uint32_t binary_size;
+    void*    binary;
+};
+
 //! @brief Creates and compiles a shader object
 bool shader_object__create(shader_object_t* self, shader_type_t type, const char* source);
 void shader_object__destroy(shader_object_t* self);
 
-//! @brief Creates an empty shader program
 bool shader_program__create(shader_program_t* self);
+bool shader_program__create_from_shader_program_binary(shader_program_t* self, shader_program_binary_t* shader_program_binary);
 void shader_program__destroy(shader_program_t* self);
 
 void shader_program__attach(shader_program_t* self, shader_object_t* shader_object);
@@ -245,8 +251,13 @@ void shader_program__attach(shader_program_t* self, shader_object_t* shader_obje
 //! @note use it on the shader objects after linking (whether successful or not) the shader program
 void shader_program__detach(shader_program_t* self, shader_object_t* shader_object);
 
-//! @brief Link the program to its final state, once all the shader objects are attached to it
+/**
+ * @brief Link the program to its final state, once all the shader objects are attached to it
+*/
 bool shader_program__link(shader_program_t* self);
+
+bool shader_program_binary__create(shader_program_binary_t* self, shader_program_t* linked_shader_program);
+void shader_program_binary__destroy(shader_program_binary_t* self);
 
 void shader_program__bind(shader_program_t* self);
 
@@ -254,17 +265,15 @@ void shader_program__bind(shader_program_t* self);
  * Vertex API
  ********************************************************************************/
 
-struct         vertex_specification;
 enum           primitive_type;
 struct         vertex_stream_specification;
-typedef struct vertex_specification         vertex_specification_t;
 typedef enum   primitive_type               primitive_type_t;
 typedef struct vertex_stream_specification  vertex_stream_specification_t;
 
 struct vertex_specification {
-    gl_type_t  component_type;
-    uint32_t   number_of_components;
-    GLboolean  normalized;
+    gl_type_t          component_type;
+    gl_channel_count_t number_of_components;
+    bool               normalized;
 };
 
 enum primitive_type {
@@ -329,12 +338,6 @@ struct vertex_stream_specification {
     primitive_type_t primitive_type;
 };
 
-/**
- * TODO: function of gl_buffer, also take in starting offset
- * @param normalized Floating component types must not be normalized, integral component types are normalized between [0, 1] range in the vertex shader
-*/
-vertex_specification_t vertex_specification(gl_type_t component_type, gl_channel_count_t component_channel_count, bool normalized);
-
 //! @param number_of_vertices number of vertices in the stream
 //! @param primitive_type allows to interpret the ordered list of vertices as an ordered list of primitives
 vertex_stream_specification_t vertex_stream_specification(uint32_t number_of_vertices, primitive_type_t primitive_type, uint32_t starting_vertex_offset);
@@ -351,16 +354,24 @@ struct geometry_object {
     bool     has_index_buffer;
 };
 
-bool geometry_object__create(geometry_object_t* self);
+void geometry_object__create(geometry_object_t* self);
+bool geometry_object__create_from_file(geometry_object_t* self, const char* file_path);
 void geometry_object__destroy(geometry_object_t* self);
 
-bool geometry_object__attach_vertex(
-    geometry_object_t* self,
-    gl_buffer_t* gl_buffer,
-    vertex_specification_t vertex_specification,
-    uint32_t offset_of_first_vertex_in_gl_buffer,
-    uint32_t stride_to_next_vertex_in_gl_buffer
-);
+//! @brief Define vertex attribute format independent of the vertex buffer
+void geometry_object__define_vertex_attribute_format(geometry_object_t* self, uint32_t attribute_index, gl_type_t components_type, gl_channel_count_t number_of_components, bool normalize);
+void geometry_object__enable_vertex_attribute_format(geometry_object_t* self, uint32_t attribute_index, bool enable);
+
+/**
+ * @brief Supplies the vertex buffer for the vertex attribute to fetch from
+ * @param buffer vertex buffer to be used for the atribute
+ * @param vertex_binding_index unique index (not the vertex buffer index, nor the vertex attribute index)
+ * @param offset offset to the first vertex in the buffer
+ * @param stride distance between vertices in the buffer
+*/
+void geometry_object__set_vertex_buffer_for_binding(geometry_object_t* self, gl_buffer_t* buffer, uint32_t vertex_binding_index, uint32_t offset, uint32_t stride);
+
+void geometry_object__associate_binding(geometry_object_t* self, uint32_t attribute_index, uint32_t vertex_binding_index);
 
 bool geometry_object__attach_index_buffer(geometry_object_t* self, gl_buffer_t* index_buffer);
 void geometry_object__detach_index_buffer(geometry_object_t* self);

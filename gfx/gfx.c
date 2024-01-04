@@ -90,8 +90,6 @@ void gfx__deinit() {
     #error "undefined backend, must either be OPENGL or VULKAN"
 #endif
     glfwTerminate();
-
-    ASSERT(!gfx.current_window);
 }
 
 void gfx__poll_events() {
@@ -174,10 +172,9 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
         window__destroy(result);
         return 0;
     }
-
-    window__set_current(result);
     
 # if defined(OPENGL)
+    window__set_current(result);
     if (!gl__init_context()) {
         // todo: first initialize stuff and only then fill in the result struct
         window__destroy(result);
@@ -272,10 +269,7 @@ const char* window__get_title(window_t self) {
 }
 
 void window__set_current(window_t self) {
-    if (gfx.current_window != self) {
-        glfwMakeContextCurrent(self->glfw_window);
-        gfx.current_window = self;
-    }
+    glfwMakeContextCurrent(self->glfw_window);
 }
 
 window_t window__get_current() {
@@ -438,24 +432,33 @@ void window__set_clipboard(window_t self, const char* str) {
     glfwSetClipboardString(self->glfw_window, str);
 }
 
-bool window__button_is_down(window_t self, button_t button) {
-    ASSERT(button < _BUTTON_SIZE);
-    return self->controller.buttons[button].ended_down;
+controller_t* window__get_controller(window_t self) {
+    return &self->controller;
 }
 
-uint32_t window__button_n_of_repeats(window_t self, button_t button) {
+bool controller__button_is_down(controller_t* self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
-    return self->controller.buttons[button].n_of_repeats;
+    return self->buttons[button].ended_down;
 }
 
-uint32_t window__button_n_of_transitions(window_t self, button_t button) {
+uint32_t controller__button_n_of_repeats(controller_t* self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
-    return self->controller.buttons[button].n_of_transitions;
+    return self->buttons[button].n_of_repeats;
 }
 
-void window__button_register_action(window_t self, button_t button, void* user_pointer, void (*action_on_button_down)(void*)) {
-    self->controller.buttons[button].action_on_button_down = action_on_button_down;
-    self->controller.buttons[button].user_pointer          = user_pointer;
+uint32_t controller__button_n_of_transitions(controller_t* self, button_t button) {
+    ASSERT(button < _BUTTON_SIZE);
+    return self->buttons[button].n_of_transitions;
+}
+
+void controller__get_cursor_pos(controller_t* self, double* x, double* y) {
+    *x = self->cursor_x;
+    *y = self->cursor_y;
+}
+
+void controller__button_register_action(controller_t* self, button_t button, void* user_pointer, void (*action_on_button_down)(void*)) {
+    self->buttons[button].action_on_button_down = action_on_button_down;
+    self->buttons[button].user_pointer          = user_pointer;
 }
 
 void window__set_cursor_state(window_t self, cursor_state_t state) {
@@ -488,16 +491,6 @@ cursor_state_t window__get_cursor_state(window_t self) {
     }
 
     return 0;
-}
-
-void window__set_cursor_pos(window_t self, double x, double y) {
-    (void) self;
-    (void) x;
-    (void) y;
-}
-
-void window__get_cursor_pos(window_t self, double* x, double* y) {
-    glfwGetCursorPos(self->glfw_window, x, y);
 }
 
 cursor_t cursor__create(uint8_t* pixels, uint32_t w, uint32_t h) {
@@ -571,7 +564,7 @@ void window__swap_buffers(window_t self) {
     window__set_current(self);
 
 #if defined(OPENGL)
-    window__swap_buffers(self->window);
+    glfwSwapBuffers(self->glfw_window);
 #elif defined(VULKAN)
     vk__render();
 #else

@@ -311,12 +311,12 @@ static void game_server__send_packets(game_server_t self) {
                 .ack_bitfield = connection->ack_bitfield
             };
 
-            if (self->sequence_id % 7 != 0) {
+            // if (self->sequence_id % 7 != 0) {
                 tp_socket__send_data_to(&self->tp_socket, &packet, sizeof(packet), connection->addr);
                 debug__write_raw("SENT PACKET: ");
                 debug__write_packet_raw(&packet);
                 debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
-            }
+            // }
         }
     }
     ++self->sequence_id;

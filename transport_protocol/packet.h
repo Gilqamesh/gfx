@@ -34,6 +34,7 @@ struct connection {
     seq_id_t       sequence_id;
     uint32_t       ack_bitfield;
     uint32_t       packets_dropped;
+    // uint32_t       packets_received; // todo: this, and throughput
     double         rtt;
     double         time_connected;
     bool           connected;

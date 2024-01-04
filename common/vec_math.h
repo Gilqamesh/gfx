@@ -46,6 +46,13 @@ static inline float  vec2__dist(vec2_t a, vec2_t b) { return vec2__len(vec2__sub
 static inline float  vec2__angl(vec2_t a, vec2_t b) { const float denom = vec2__len(a) * vec2__len(b); assert(denom != 0.0f); return acos(vec2__inner(a, b) / denom); }
 static inline void   vec2__norm_self(vec2_t* self) { vec2__div_self(self, vec2__len_self(self)); }
 static inline vec2_t vec2__norm(vec2_t a) { vec2__norm_self(&a); return a; }
+static inline vec2_t vec2__clamp(vec2_t a, vec2_t min, vec2_t max) {
+    a._[0] = a._[0] < min._[0] ? min._[0] : a._[0];
+    a._[1] = a._[1] < min._[1] ? min._[1] : a._[1];
+    a._[0] = a._[0] < max._[0] ? a._[0] : max._[0];
+    a._[1] = a._[1] < max._[1] ? a._[1] : max._[1];
+    return a;
+}
 static inline void   vec2__reflect_self(vec2_t* self, vec2_t normal) {
     // v' = v - 2(nv)n
     vec2__norm_self(&normal);
@@ -115,6 +122,15 @@ static inline float  vec3__dist(vec3_t a, vec3_t b) { return vec3__len(vec3__sub
 static inline float  vec3__angl(vec3_t a, vec3_t b) { const float denom = vec3__len(a) * vec3__len(b); assert(denom != 0.0f); return acos(vec3__inner(a, b) / denom); }
 static inline void   vec3__norm_self(vec3_t* self) { vec3__div_self(self, vec3__len_self(self)); }
 static inline vec3_t vec3__norm(vec3_t a) { vec3__norm_self(&a); return a; }
+static inline vec3_t vec3__clamp(vec3_t a, vec3_t min, vec3_t max) {
+    a._[0] = a._[0] < min._[0] ? min._[0] : a._[0];
+    a._[1] = a._[1] < min._[1] ? min._[1] : a._[1];
+    a._[2] = a._[2] < min._[2] ? min._[2] : a._[2];
+    a._[0] = a._[0] < max._[0] ? a._[0] : max._[0];
+    a._[1] = a._[1] < max._[1] ? a._[1] : max._[1];
+    a._[2] = a._[2] < max._[2] ? a._[2] : max._[2];
+    return a;
+}
 static inline void   vec3__reflect_self(vec3_t* self, vec3_t normal) {
     // v' = v - 2(vn)n
     vec3__norm_self(&normal);
@@ -182,6 +198,17 @@ static inline float  vec4__len_self(vec4_t* self) { return sqrt(self->_[0] * sel
 static inline float  vec4__len(vec4_t a) { return vec4__len_self(&a); }
 static inline void   vec4__norm_self(vec4_t* self) { vec4__div_self(self, vec4__len_self(self)); }
 static inline vec4_t vec4__norm(vec4_t a) { vec4__norm_self(&a); return a; }
+static inline vec4_t vec4__clamp(vec4_t a, vec4_t min, vec4_t max) {
+    a._[0] = a._[0] < min._[0] ? min._[0] : a._[0];
+    a._[1] = a._[1] < min._[1] ? min._[1] : a._[1];
+    a._[2] = a._[2] < min._[2] ? min._[2] : a._[2];
+    a._[3] = a._[3] < min._[3] ? min._[3] : a._[3];
+    a._[0] = a._[0] < max._[0] ? a._[0] : max._[0];
+    a._[1] = a._[1] < max._[1] ? a._[1] : max._[1];
+    a._[2] = a._[2] < max._[2] ? a._[2] : max._[2];
+    a._[3] = a._[3] < max._[3] ? a._[3] : max._[3];
+    return a;
+}
 static inline void   vec4__reflect_self(vec4_t* self, vec4_t normal) {
     // v' = v - 2(vn)n
     vec4__norm_self(&normal);

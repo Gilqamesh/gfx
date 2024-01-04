@@ -1,3 +1,62 @@
+struct         g_modelformat_header;
+struct         g_modelformat_chunk_header;
+struct         g_modelformat_chunk_position_header;
+struct         g_modelformat_chunk_normal_header;
+struct         g_modelformat_chunk_texture_2d_header;
+struct         g_modelformat_chunk_index_header;
+typedef struct g_modelformat_header                  g_modelformat_header_t;
+typedef struct g_modelformat_chunk_header            g_modelformat_chunk_header_t;
+typedef struct g_modelformat_chunk_position_header   g_modelformat_chunk_position_header_t;
+typedef struct g_modelformat_chunk_normal_header     g_modelformat_chunk_normal_header_t;
+typedef struct g_modelformat_chunk_texture_2d_header g_modelformat_chunk_texture_2d_header_t;
+typedef struct g_modelformat_chunk_material_header   g_modelformat_chunk_material_header_t;
+typedef struct g_modelformat_chunk_index_header      g_modelformat_chunk_index_header_t;
+
+struct g_modelformat_header {
+union {
+    uint32_t magic;
+    char     magic_name[4];
+};
+uint32_t n_of_chunks;
+uint32_t header_size;
+};
+
+struct g_modelformat_chunk_header {
+uint32_t type;
+uint32_t size_including_header;
+};
+
+struct g_modelformat_chunk_position_header {
+g_modelformat_chunk_header_t chunk_header;
+uint32_t n_of_vertices;
+// header is followed by 'n_of_vertices' of { r32 x, r32 y, r32 z }
+};
+
+struct g_modelformat_chunk_normal_header {
+g_modelformat_chunk_header_t chunk_header;
+uint32_t n_of_normals;
+// header is followed by 'n_of_normals' of { r32 x, r32 y, r32 z }, the resulting vector is normalized
+};
+
+struct g_modelformat_chunk_texture_2d_header {
+g_modelformat_chunk_header_t chunk_header;
+uint32_t n_of_textures;
+//! TODO: figure out this association
+uint32_t texture_file_index;
+// header is followed by 'n_of_textures' of { r32 u, r32 v }, the r32 values are clamped to the range of [0, 1]
+};
+
+struct g_modelformat_chunk_material_header {
+g_modelformat_chunk_header_t chunk_header;
+uint32_t n_of_materials;
+};
+
+struct g_modelformat_chunk_index_header {
+g_modelformat_chunk_header_t chunk_header;
+uint32_t n_of_indices;
+// header is followed by 'n_of_indices' of u32 indices
+};
+
 static void gl_buffer__bind(gl_buffer_t* self);
 static void gl_buffer__unbind(gl_buffer_t* self);
 static uint32_t gl_buffer_type__to_gl(gl_buffer_type_t type);
@@ -9,17 +68,16 @@ static const char* gl_error_message_type__to_type_str(GLenum type);
 static const char* gl_error_message_type__to_str(GLenum type);
 static const char* gl_error_message_severity__to_type_str(GLenum severity);
 static const char* gl_error_message_severity__to_str(GLenum severity);
-static GLenum gl_object_label__from_buffer_type(gl_buffer_type_t buffer_type);
 static uint32_t shader_type__to_gl(shader_type_t shader_type);
 static const char* shader_type__to_str(shader_type_t shader_type);
 static void geometry_object__bind(geometry_object_t* self);
 static void geometry_object__unbind(geometry_object_t* self);
 static uint32_t gl_type__to_gl(gl_type_t type);
-static uint32_t gl_type__to_size(gl_type_t type);
 static uint32_t gl_channel_count__to_gl(gl_channel_count_t channel_count);
 static uint32_t gl_channel_count__to_size(gl_channel_count_t channel_count);
 static uint32_t gl_type_and_channel__to_internal_format(gl_type_t type, gl_channel_count_t channel_count);
 static GLenum primitive_type__to_gl(primitive_type_t type);
+static bool geometry_object__load_from_g_modelformat(geometry_object_t* self, char* buffer, size_t buffer_size);
 
 static void gl_buffer__bind(gl_buffer_t* self) {
     if (self->is_bound) {
@@ -188,19 +246,6 @@ static const char* gl_error_message_severity__to_str(GLenum severity) {
     return 0;
 }
 
-static GLenum gl_object_label__from_buffer_type(gl_buffer_type_t buffer_type) {
-    switch (buffer_type) {
-    case GL_BUFFER_TYPE_VERTEX:             return GL_BUFFER;
-    case GL_BUFFER_TYPE_INDEX:              return GL_BUFFER;
-    case GL_BUFFER_TYPE_TEXTURE:            return GL_TEXTURE;
-    case GL_BUFFER_TYPE_TRANSFORM_FEEDBACK: return GL_TRANSFORM_FEEDBACK;
-    case GL_BUFFER_TYPE_FRAMEBUFFER:        return GL_FRAMEBUFFER;
-    default: ASSERT(false);
-    }
-
-    return 0;
-}
-
 static uint32_t shader_type__to_gl(shader_type_t shader_type) {
     switch (shader_type) {
     case SHADER_TYPE_VERTEX:       return GL_VERTEX_SHADER;
@@ -252,19 +297,6 @@ static uint32_t gl_type__to_gl(gl_type_t type) {
     }
 
     return 0;
-}
-
-static uint32_t gl_type__to_size(gl_type_t type) {
-    switch (type) {
-    case GL_TYPE_R32:   return 4;
-    case GL_TYPE_S8:    return sizeof(int8_t);
-    case GL_TYPE_S16:   return sizeof(int16_t);
-    case GL_TYPE_S32:   return sizeof(int32_t);
-    case GL_TYPE_U8:    return sizeof(uint8_t);
-    case GL_TYPE_U16:   return sizeof(uint16_t);
-    case GL_TYPE_U32:   return sizeof(uint32_t);
-    default: ASSERT(false); 
-    }
 }
 
 static uint32_t gl_channel_count__to_gl(gl_channel_count_t channel_count) {
@@ -364,4 +396,12 @@ static GLenum primitive_type__to_gl(primitive_type_t type) {
     }
 
     return 0;
+}
+
+static bool geometry_object__load_from_g_modelformat(geometry_object_t* self, char* buffer, size_t buffer_size) {
+    (void) self;
+    (void) buffer;
+    (void) buffer_size;
+    
+    return true;
 }

@@ -12,9 +12,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "third_party/stb/stb_image.h"
-
 #include "game_client_impl.c"
 
 game_client_t game_client__create(game_client_config_t config, uint16_t client_port, const char* server_ip, uint16_t server_port) {
@@ -48,8 +45,20 @@ game_client_t game_client__create(game_client_config_t config, uint16_t client_p
         return 0;
     }
 
-    game_t game_state = game__create();
-    (void) game_state;
+    uint32_t monitors_size = 0;
+    monitor_t* monitors = monitor__get_monitors(&monitors_size);
+    ASSERT(monitors_size > 0);
+    window_t window = window__create(monitors[0], "Main Window", 800, 600);
+    if (!window) {
+        return 0;
+    }
+
+    game_t game_state = game__create(window);
+    if (!game_state) {
+        return 0;
+    }
+
+    game__customize_window(game_state, window);
 
     game_client_t result = calloc(1, sizeof(*result));
     if (!result) {
@@ -57,17 +66,9 @@ game_client_t game_client__create(game_client_config_t config, uint16_t client_p
         return 0;
     }
 
-    memcpy(&result->config, &config, sizeof(result->config));
+    result->game_state = game_state;
 
-    if (!game_client__load_images(result)) {
-        return 0;
-    }
-    result->cursor = cursor__create(result->cursor_image.data, result->cursor_image.w, result->cursor_image.h);
-    if (!result->cursor) {
-        return 0;
-    }
-    // window__set_icon(result->window, result->window_icon_image.data, result->window_icon_image.w, result->window_icon_image.h);
-    // window__set_cursor(result->window, result->cursor);
+    memcpy(&result->config, &config, sizeof(result->config));
 
     result->tp_socket = tp_socket;
     memcpy(&result->connection.addr, &server_addr, sizeof(result->connection.addr));
@@ -78,28 +79,23 @@ game_client_t game_client__create(game_client_config_t config, uint16_t client_p
     result->sent_packets_queue_size = sent_packets_queue_size;
     result->sent_packets_queue = sent_packets_queue;
 
+    result->window = window;
+
     game_client__push_stage(result, &loop_stage__collect_previous_frame_info);
     game_client__push_stage(result, &loop_stage__poll_inputs);
     game_client__push_stage(result, &loop_stage__update_loop);
+    game_client__push_stage(result, &loop_stage__render);
     game_client__push_stage(result, &loop_stage__sleep_till_end_of_frame);
 
     return result;
 }
 
 void game_client__destroy(game_client_t self) {
-    gfx__deinit();
-
-    if (self->window_icon_image.data) {
-        stbi_image_free(self->window_icon_image.data);
-    }
-    if (self->cursor_image.data) {
-        stbi_image_free(self->cursor_image.data);
-    }
-    if (self->cursor) {
-        cursor__destroy(self->cursor);
-    }
+    window__destroy(self->window);
 
     tp_socket__destroy(&self->tp_socket);
+
+    gfx__deinit();
 
     free(self);
 }
@@ -109,8 +105,9 @@ void game_client__run(game_client_t self, double target_fps) {
 
     debug__set_message_type_availability(DEBUG_NET, false);
 
-    self->previous_frame_info.time_frame_expected = 1.0 / target_fps;
-    self->time_game_update_fixed                  = game__update_upper_bound(self->game_state);
+    self->time_frame_expected    = 1.0 / target_fps;
+    self->time_game_update_fixed = game__update_upper_bound(self->game_state);
+    ASSERT(self->time_game_update_fixed < self->time_frame_expected);
     system__init();
 
     ASSERT(self->loop_stages_top > 0);
