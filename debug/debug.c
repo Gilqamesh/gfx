@@ -28,6 +28,11 @@ bool debug__init_module() {
         return false;
     }
 
+    debug.write_mutex = mutex__create();
+    if (!debug.write_mutex) {
+        return false;
+    }
+
     return true;
 }
 
@@ -37,8 +42,19 @@ void debug__deinit_module() {
         debug.error_file = 0;
     }
 
+    if (debug.write_mutex) {
+        mutex__destroy(debug.write_mutex);
+    }
 
     str_builder__destroy(&debug.str_builder);
+}
+
+void debug__lock() {
+    mutex__lock(debug.write_mutex);
+}
+
+void debug__unlock() {
+    mutex__unlock(debug.write_mutex);
 }
 
 void debug__write_raw(const char* format, ...) {
@@ -60,6 +76,8 @@ void debug__writeln(const char* format, ...) {
 }
 
 void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...) {
+    debug__lock();
+
     if (!debug__get_message_type_availability(message_type)) {
         debug__clear();
         return ;
@@ -73,6 +91,8 @@ void debug__write_and_flush(debug_module_t module, debug_message_type_t message_
     va_end(ap);
 
     debug__flush(module, message_type);
+
+    debug__unlock();
 }
 
 void debug__flush(debug_module_t module, debug_message_type_t message_type) {
@@ -90,11 +110,6 @@ void debug__flush(debug_module_t module, debug_message_type_t message_type) {
     }
     
     debug__clear();
-}
-
-void debug__clear() {
-    str_builder__clear(&debug.str_builder);
-    debug.number_of_lines = 0;
 }
 
 void debug__set_message_type_availability(debug_message_type_t message_type, bool value) {

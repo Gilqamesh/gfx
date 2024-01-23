@@ -134,7 +134,11 @@ static token_t scanner__make_number(scanner_t* self, bool seen_dot) {
         scanner__eat(self);
     }
 
-    return scanner__make_token(self, TOKEN_NUMBER);
+    if (seen_dot) {
+        return scanner__make_token(self, TOKEN_R32);
+    } else {
+        return scanner__make_token(self, TOKEN_S32);
+    }
 }
 
 static token_t scanner__make_identifier(scanner_t* self) {
@@ -166,6 +170,7 @@ static token_type_t scanner__identifier_type(scanner_t* self) {
         case 't': return scanner__identifier_type_helper(self, 1, "extures_2d", TOKEN_TEXTURE_2D);
         case 'm': return scanner__identifier_type_helper(self, 1, "aterials", TOKEN_MATERIAL);
         case 'i': return scanner__identifier_type_helper(self, 1, "ndices", TOKEN_INDEX);
+        case 'g': return scanner__identifier_type_helper(self, 1, "eometry", TOKEN_GEOMETRY);
     }
 
     return TOKEN_ERROR;

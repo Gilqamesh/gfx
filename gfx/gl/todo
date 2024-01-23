@@ -1,0 +1,2 @@
+avoid context level rebinding (ex. glGetIntegerv(GL_TEXTURE_BINDING_2D, &id))
+cache context level parameter limitations (ex. glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_texture_units)), or use guaranteed limitations on the api level

@@ -7,7 +7,7 @@
 
 static size_t str_builder__size_left(str_builder_t* self);
 static size_t str_builder__vfensure_size_left(str_builder_t* self, const char* format, va_list ap);
-static void   str_builder__ensure_size_left(str_builder_t* self, size_t bytes_to_write);
+static size_t str_builder__ensure_size_left(str_builder_t* self, size_t bytes_to_write);
 
 static size_t str_builder__size_left(str_builder_t* self) {
     assert(self->cur <= self->end);
@@ -21,11 +21,10 @@ static size_t str_builder__vfensure_size_left(str_builder_t* self, const char* f
     va_end(ap_cpy);
     assert(bytes_written >= 0);
 
-    str_builder__ensure_size_left(self, (size_t) bytes_written);
-    return (size_t) bytes_written;
+    return str_builder__ensure_size_left(self, (size_t) bytes_written);
 }
 
-static void str_builder__ensure_size_left(str_builder_t* self, size_t bytes_to_write) {
+static size_t str_builder__ensure_size_left(str_builder_t* self, size_t bytes_to_write) {
     const size_t necessary_size = self->cur + bytes_to_write - self->start;
     const size_t old_size       = self->end - self->start;
     size_t new_size             = old_size;
@@ -34,28 +33,47 @@ static void str_builder__ensure_size_left(str_builder_t* self, size_t bytes_to_w
     }
     
     if (new_size != old_size) {
+        if (self->is_static) {
+            return (size_t) -1;
+        }
+
         const size_t old_cur = self->cur - self->start;
         self->start = realloc(self->start, new_size);
         self->end   = self->start + new_size;
         self->cur   = self->start + old_cur;
     }
+
+    return bytes_to_write;
+}
+
+void str_builder__create_static(str_builder_t* self, void* memory, size_t memory_size) {
+    self->start     = (char*) memory;
+    self->cur       = self->start;
+    self->end       = self->start + memory_size;
+    self->is_static = 1;
+
+    str_builder__clear(self);
 }
 
 void str_builder__create(str_builder_t* self) {
     const size_t memory_size = 1;
-    self->start = malloc(memory_size);
-    self->cur   = self->start;
-    self->end   = self->start + memory_size;
+    self->start     = malloc(memory_size);
+    self->cur       = self->start;
+    self->end       = self->start + memory_size;
+    self->is_static = 0;
 
     str_builder__clear(self);
 }
 
 void str_builder__destroy(str_builder_t* self) {
+    assert(!self->is_static);
     free(self->start);
 }
 
 size_t str_builder__prepend(str_builder_t* self, const void* in, size_t in_size) {
-    str_builder__ensure_size_left(self, in_size);
+    if (str_builder__ensure_size_left(self, in_size) == (size_t) -1) {
+        return 0;
+    }
 
     const size_t old_str_len = str_builder__len(self);
     char tmp = *self->start;
@@ -85,6 +103,9 @@ size_t str_builder__fprepend(str_builder_t* self, const char* format, ...) {
 
 size_t str_builder__vfprepend(str_builder_t* self, const char* format, va_list ap) {
     const size_t bytes_to_write = str_builder__vfensure_size_left(self, format, ap);
+    if (bytes_to_write == (size_t) -1) {
+        return 0;
+    }
 
     const size_t old_str_len = str_builder__len(self);
     char tmp = *self->start;
@@ -105,7 +126,9 @@ size_t str_builder__vfprepend(str_builder_t* self, const char* format, va_list a
 }
 
 size_t str_builder__append(str_builder_t* self, const void* in, size_t in_size) {
-    str_builder__ensure_size_left(self, in_size);
+    if (str_builder__ensure_size_left(self, in_size) == (size_t) -1) {
+        return 0;
+    }
 
     memcpy(self->cur, in, in_size);
     self->cur += in_size;
@@ -126,6 +149,9 @@ size_t str_builder__fappend(str_builder_t* self, const char* format, ...) {
 
 size_t str_builder__vfappend(str_builder_t* self, const char* format, va_list ap) {
     const size_t bytes_to_write = str_builder__vfensure_size_left(self, format, ap);
+    if (bytes_to_write == (size_t) -1) {
+        return 0;
+    }
 
     if ((size_t) vsnprintf(self->cur, str_builder__size_left(self), format, ap) != bytes_to_write) {
         assert(0);
@@ -136,11 +162,11 @@ size_t str_builder__vfappend(str_builder_t* self, const char* format, va_list ap
 }
 
 void str_builder__patch(str_builder_t* self, size_t at, const void* in, size_t in_size) {
-    assert(self->start + at + in_size < self->cur);
+    assert(self->start + at + in_size <= self->cur);
     memcpy(self->start + at, in, in_size);
 }
 
-const char* str_builder__str(str_builder_t* self) {
+char* str_builder__str(str_builder_t* self) {
     assert(*self->cur == '\0');
     return self->start;
 }

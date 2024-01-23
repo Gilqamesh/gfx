@@ -11,8 +11,11 @@ struct str_builder {
     char* start;
     char* cur;
     char* end;
+
+    int is_static;
 };
 
+void str_builder__create_static(str_builder_t* self, void* memory, size_t memory_size);
 void str_builder__create(str_builder_t* self);
 void str_builder__destroy(str_builder_t* self);
 
@@ -27,7 +30,7 @@ size_t str_builder__vfappend(str_builder_t* self, const char* format, va_list ap
 void str_builder__patch(str_builder_t* self, size_t at, const void* in, size_t in_size);
 
 //! @returns null-terminated string
-const char* str_builder__str(str_builder_t* self);
+char* str_builder__str(str_builder_t* self);
 size_t str_builder__len(str_builder_t* self);
 void str_builder__clear(str_builder_t* self);
 

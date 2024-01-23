@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <sys/sendfile.h>
+#include <sys/types.h>
 
 static inline uint32_t file_access_mode(enum file_access_mode access_mode) {
     uint32_t result = 0;
@@ -221,4 +222,48 @@ bool file__seek(file_t* self, size_t offset, file_seek_type_t seek_type, size_t*
     }
 
     return true;
+}
+
+bool directory__open(directory_t* self, const char* path) {
+    if ((self->handle = opendir(path)) == NULL) {
+        // todo: diagnostics, errno
+        return false;
+    }
+
+    return true;
+}
+
+void directory__close(directory_t* self) {
+    if (closedir(self->handle) == -1) {
+        // todo: diagnostics, errno
+    }
+}
+
+bool directory__read(directory_t* self, char* buffer, size_t buffer_size, size_t* bytes_written) {
+    if (buffer == NULL || buffer_size == 0) {
+        // error_code__exit(DIRECTORY_ERROR_CODE_LINUX_INVALID_DIRECTORY_READ_INPUT);
+        assert(false);
+    }
+
+    struct dirent* file_info;
+    if ((file_info = readdir(self->handle)) == NULL) {
+        // todo: diagnostics, save errno value and check if it has changed, if it didn't, then we reached the end of the directory stream
+        return false;
+    }
+
+    int _bytes_written = snprintf(buffer, buffer_size, "%s", file_info->d_name);
+    assert(_bytes_written >= 0);
+    if (bytes_written != NULL) {
+        *bytes_written = (size_t) _bytes_written;
+    }
+
+    return true;
+}
+
+bool directory__create(const char* path) {
+    return mkdir(path, 0644) == 0;
+}
+
+bool directory__delete(const char* path) {
+    return rmdir(path) == 0;
 }

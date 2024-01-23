@@ -122,6 +122,8 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
             time_render_actual_avg   /= frame_samples_count;
             number_of_updates_avg    /= frame_samples_count;
 
+            debug__lock();
+
             debug__writeln("Frame #%u", game_client->current_frame);
             debug__writeln("Time lost:   %lf", game_client->time_lost);
             debug__writeln("Frames lost: %lf", game_client->frames_lost);
@@ -149,6 +151,8 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_cli
                 debug__writeln("    RTT:                   %lfms", connection->rtt * 1000.0);
             }
             debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO);
+
+            debug__unlock();
         }
     }
 
@@ -273,8 +277,12 @@ static void game_client__connection_accept(
     connection->packets_dropped = 0;
     connection->connected       = true;
 
+    debug__lock();
+
     debug__writeln("client connected to the server: %u:%u", sender_addr.addr, sender_addr.port);
     debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET);
+
+    debug__unlock();
 }
 
 static void game_client__accept_packet(game_client_t self, connection_t* connection, packet_t* packet, double time) {
@@ -301,9 +309,13 @@ static void game_client__accept_packet(game_client_t self, connection_t* connect
 
     game_client__ack_packet(self, connection, packet, time);
 
+    debug__lock();
+
     debug__write_raw("RECV PACKET: ");
     debug__write_packet_raw(packet);
     debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET);
+
+    debug__unlock();
 }
 
 static void game_client__receive_packets(game_client_t self, double time) {
@@ -359,9 +371,13 @@ static void game_client__send_packet(game_client_t self, double time) {
 
     tp_socket__send_data(&self->tp_socket, &packet, sizeof(packet));
 
+    debug__lock();
+
     debug__write_raw("SENT PACKET: ");
     debug__write_packet_raw(&packet);
     debug__flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_NET);
+    
+    debug__unlock();
 
     ++self->sequence_id;
 }

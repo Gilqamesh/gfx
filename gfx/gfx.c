@@ -34,6 +34,8 @@ bool gfx__init() {
 
     glfwSetErrorCallback(&gfx__error_callback);
 
+    debug__lock();
+
     debug__writeln("version string: %s", glfwGetVersionString());
     debug__writeln("compiled version: %d.%d.%d", GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION);
 
@@ -47,6 +49,8 @@ bool gfx__init() {
     if (glfwInit() == GLFW_FALSE) {
         debug__writeln("glfwInit == GLFW_FALSE");
         debug__flush(DEBUG_MODULE_GLFW, DEBUG_ERROR);
+        
+        debug__unlock();
         return false;
     }
 
@@ -71,6 +75,8 @@ bool gfx__init() {
     }
 
     debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
+
+    debug__unlock();
 
     for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(gfx.controller); ++controller_index) {
         if (glfwJoystickIsGamepad(controller_index)) {

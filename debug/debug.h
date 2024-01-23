@@ -6,6 +6,8 @@
 # include <assert.h>
 # include <stdint.h>
 
+# include "thread.h"
+
 // todo: turn some of the message types that are resource-intensitve into compile-time api
 
 # define ASSERT(expr) do { \
@@ -43,16 +45,29 @@ enum debug_module {
     _DEBUG_MODULE_SIZE
 };
 
-void debug__write_raw(const char* format, ...);
-void debug__writeln(const char* format, ...);
-void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...);
-void debug__flush(debug_module_t module, debug_message_type_t message_type);
-void debug__clear();
+/**
+ * @brief Call before non-atomic operations
+*/
+void debug__lock();
+void debug__unlock();
 
+//! @note Non-atomic
+void debug__write_raw(const char* format, ...);
+//! @note Non-atomic
+void debug__writeln(const char* format, ...);
+//! @note Atomic
+void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...);
+//! @note Non-atomic
+void debug__flush(debug_module_t module, debug_message_type_t message_type);
+
+//! @note Atomic
 void debug__set_message_type_availability(debug_message_type_t message_type, bool value);
+//! @note Atomic
 bool debug__get_message_type_availability(debug_message_type_t message_type);
 
+//! @note Atomic
 void debug__set_message_module_availability(debug_module_t module, bool value);
+//! @note Atomic
 bool debug__get_message_module_availability(debug_module_t module);
 
 #endif // DEBUG_H

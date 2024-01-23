@@ -4,6 +4,7 @@
 # include <stdbool.h>
 # include <time.h>
 # include <stdarg.h>
+# include <dirent.h>
 
 struct         file;
 enum           file_access_mode;
@@ -76,5 +77,48 @@ bool file__fwrite(file_t* self, size_t* opt_written_bytes, const char* format, .
 //! @returns bytes written excluding null-terminating character
 bool file__vfwrite(file_t* self, size_t* opt_written_bytes, const char* format, va_list ap);
 bool file__seek(file_t* self, size_t offset, file_seek_type_t seek_type, size_t* opt_file_pointer_position);
+
+/**
+ * Directory API
+*/
+
+struct         directory;
+typedef struct directory directory_t;
+
+struct directory {
+    DIR* handle;
+};
+
+// todo: move file dependency out from this file
+// note: enum file_flag def
+
+// @brief opens the first file in the specified directory
+bool directory__open(directory_t* self, const char* path);
+// @brief closes the directory handle
+void directory__close(directory_t* self);
+// @brief returns the name of the current file of the opened directory, and moves to the next file
+// @param bytes_written optional parameter to retrieve the number of bytes written (or would have been written in the case of truncation) into the buffer
+// @returns true on success, false if no more files are in the directory
+bool directory__read(directory_t* self, char* buffer, size_t buffer_size, size_t* bytes_written);
+
+// @brief if it doesn't already exist, create a directory
+bool directory__create(const char* path);
+// @brief deletes a directory if exists and empty
+bool directory__delete(const char* path);
+
+// TODO: implement for-each API
+// // @brief apply fn on each file_type on path one level deep
+// void directory__foreach_shallow(const char* path, bool (*fn)(const char* path, void* user_data), void* user_data, enum file_type file_type_flags);
+// // @brief apply fn on each file_type on path recursively
+// // @param fn function to apply on each of the matching files, should return true if the algorithm should keep recursing on the matched file if it's a directory
+// void directory__foreach_deep(
+//     const char* path,
+//     bool (*fn)(const char* path, void* user_data), void* user_data,
+//     enum file_type file_type_flags
+// );
+// // @brief apply fn on each file_type on path depth level deep
+// // @param depth 0 depth is equal to a for each shallow
+// // @param fn function to apply on each of the matching files, should return true if the algorithm should keep recursing on the matched file if it's a directory
+// void directory__foreach(const char* path, bool (*fn)(const char* path, void* user_data), void* user_data, enum file_type file_type_flags, size_t depth);
 
 #endif

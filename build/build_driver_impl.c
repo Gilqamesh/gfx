@@ -9,7 +9,6 @@ enum supported_module_name {
     TP_MODULE,
     GAME_SERVER_MODULE,
     GAME_CLIENT_MODULE,
-    SYSTEM_MODULE,
     GAME_MODULE,
     GFX_MODULE,
     G_MODELFORMAT_COMPILER_MODULE,
@@ -38,7 +37,6 @@ static void supported_module__init_debug_module(supported_module_t* self);
 static void supported_module__init_game_server_module(supported_module_t* self);
 static void supported_module__init_game_client_module(supported_module_t* self);
 static void supported_module__init_transport_protocol_module(supported_module_t* self);
-static void supported_module__init_system_module(supported_module_t* self);
 static void supported_module__init_game_module(supported_module_t* self);
 static void supported_module__init_gfx_module(supported_module_t* self);
 static void supported_module__init_g_modelformat_compiler_module(supported_module_t* self);
@@ -65,10 +63,6 @@ static supported_module_t supported_modules[_SUPPORTED_MODULE_NAME_SIZE] = {
     {
         .dir = "game_client",
         .supported_module__init_and_compile = &supported_module__init_game_client_module
-    },
-    {
-        .dir = "system",
-        .supported_module__init_and_compile = &supported_module__init_system_module
     },
     {
         .dir = "game",
@@ -132,9 +126,16 @@ static void supported_module__init_common_module(supported_module_t* self) {
     module_file__add_common_cflags(file_file);
     module_file__add_debug_cflags(file_file);
 
-    module_file_t libc_file = module__add_file(self->module, "libc.c");
-    module_file__add_common_cflags(libc_file);
-    module_file__add_debug_cflags(libc_file);
+    module_file_t system_file = module__add_file(self->module, "system.c");
+
+    module_file__add_common_cflags(system_file);
+    module_file__add_debug_cflags(system_file);
+
+    module_file_t thread_file = module__add_file(self->module, "thread.c");
+
+    module_file__add_common_cflags(thread_file);
+    module_file__add_debug_cflags(thread_file);
+
 
     module__append_lflag(self->module, "-lm");
 
@@ -180,7 +181,7 @@ static void supported_module__init_game_server_module(supported_module_t* self) 
     }
 
     module__add_supported_dependency(self->module, TP_MODULE);
-    module__add_supported_dependency(self->module, SYSTEM_MODULE);
+    module__add_supported_dependency(self->module, COMMON_MODULE);
     module__add_supported_dependency(self->module, DEBUG_MODULE);
     module__add_supported_dependency(self->module, GAME_MODULE);
 }
@@ -197,7 +198,7 @@ static void supported_module__init_game_client_module(supported_module_t* self) 
     }
 
     module__add_supported_dependency(self->module, TP_MODULE);
-    module__add_supported_dependency(self->module, SYSTEM_MODULE);
+    module__add_supported_dependency(self->module, COMMON_MODULE);
     module__add_supported_dependency(self->module, DEBUG_MODULE);
     module__add_supported_dependency(self->module, GAME_MODULE);
     module__add_supported_dependency(self->module, GFX_MODULE);
@@ -217,18 +218,6 @@ static void supported_module__init_transport_protocol_module(supported_module_t*
     module__add_supported_dependency(self->module, DEBUG_MODULE);
 }
 
-static void supported_module__init_system_module(supported_module_t* self) {
-    module_file_t system_file = module__add_file(self->module, "system.c");
-
-    module_file__add_common_cflags(system_file);
-    module_file__add_debug_cflags(system_file);
-
-    module_file_t thread_file = module__add_file(self->module, "thread.c");
-
-    module_file__add_common_cflags(thread_file);
-    module_file__add_debug_cflags(thread_file);
-}
-
 static void supported_module__init_game_module(supported_module_t* self) {
     module_file_t game_file = module__add_file(self->module, "game.c");
 
@@ -238,7 +227,7 @@ static void supported_module__init_game_module(supported_module_t* self) {
     module__append_lflag(self->module, "-lm");
 
     module__add_supported_dependency(self->module, DEBUG_MODULE);
-    module__add_supported_dependency(self->module, SYSTEM_MODULE);
+    module__add_supported_dependency(self->module, COMMON_MODULE);
     module__add_supported_dependency(self->module, GFX_MODULE);
 }
 

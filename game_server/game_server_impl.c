@@ -113,6 +113,8 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
             time_render_actual_avg   /= frame_samples_count;
             number_of_updates_avg    /= frame_samples_count;
 
+            debug__lock();
+
             debug__writeln("Frame #%u", game_server->current_frame);
             debug__writeln("Time lost:   %lf", game_server->time_lost);
             debug__writeln("Frames lost: %lf", game_server->frames_lost);
@@ -127,6 +129,8 @@ static bool loop_stage__collect_previous_frame_info(loop_stage_t* self, game_ser
             debug__writeln("    Frame expected:        %lfms, %lffps", time_frame_expected_avg * 1000.0, 1.0 / time_frame_expected_avg);
             debug__writeln("    Left to process:       %lfms", (game_server->time_update_to_process - game_server->previous_frame_info.elapsed_time) * 1000.0);
             debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
+
+            debug__unlock();
         }
     }
 
@@ -199,10 +203,15 @@ static void game_server__disconnect_connection(game_server_t self, connection_t*
     --self->connections_fill;
 
     connection->connected = false;
+
+    debug__lock();
+
     debug__writeln("client disconnected from the server: %u:%u", connection->addr.addr, connection->addr.port);
     debug__writeln("last known packet from them: %u, local sequence id: %u", connection->sequence_id, self->sequence_id);
     debug__writeln("available connections: %u", self->connections_size - self->connections_fill);
     debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
+
+    debug__unlock();
 }
 
 static void game_server__connection__accept(
@@ -221,9 +230,13 @@ static void game_server__connection__accept(
     connection->time_connected  = time;
     connection->connected       = true;
 
+    debug__lock();
+
     debug__writeln("client connected to the server: %u:%u", sender_addr.addr, sender_addr.port);
     debug__writeln("available connections left: %u", self->connections_size - self->connections_fill);
     debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
+
+    debug__unlock();
 }
 
 static void game_server__accept_packet(game_server_t self, connection_t* connection, packet_t* packet, double time) {
@@ -250,9 +263,13 @@ static void game_server__accept_packet(game_server_t self, connection_t* connect
         }
     }
 
+    debug__lock();
+    
     debug__write_raw("RECV PACKET: ");
     debug__write_packet_raw(packet);
     debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
+
+    debug__unlock();
 }
 
 static void game_server__receive_packets(game_server_t self, double time) {
@@ -313,9 +330,14 @@ static void game_server__send_packets(game_server_t self) {
 
             // if (self->sequence_id % 7 != 0) {
                 tp_socket__send_data_to(&self->tp_socket, &packet, sizeof(packet), connection->addr);
+                
+                debug__lock();
+
                 debug__write_raw("SENT PACKET: ");
                 debug__write_packet_raw(&packet);
                 debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
+
+                debug__unlock();
             // }
         }
     }

@@ -5,6 +5,8 @@ typedef struct debug {
     bool     error_level_availability[_DEBUG_MESSAGE_TYPE_SIZE];
     bool     error_module_availability[_DEBUG_MODULE_SIZE];
     FILE*    error_file;
+
+    mutex_t  write_mutex;
 } debug_t;
 
 static debug_t debug;
@@ -13,6 +15,7 @@ static const char* debug_message_type__to_str(debug_message_type_t message_type)
 static const char* debug_module__to_str(debug_module_t module);
 static void debug__vwriteln(const char* format, va_list ap);
 static void debug__flush_helper(FILE* fp, debug_module_t module, debug_message_type_t message_type);
+static void debug__clear();
 
 static const char* debug_message_type__to_str(debug_message_type_t message_type) {
     switch (message_type) {
@@ -70,4 +73,10 @@ static void debug__flush_helper(FILE* fp, debug_module_t module, debug_message_t
     }
 
     fprintf(fp, "%s", str_builder__str(&debug.str_builder));
+    fflush(fp);
+}
+
+static void debug__clear() {
+    str_builder__clear(&debug.str_builder);
+    debug.number_of_lines = 0;
 }

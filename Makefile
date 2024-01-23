@@ -21,7 +21,6 @@ common_dir := common
 common_src := \
 	$(common_dir)/hash_set.c \
 	$(common_dir)/hash_map.c \
-	$(common_dir)/libc.c\
 	$(common_dir)/file.c\
 	$(common_dir)/str_builder.c
 common_dps := $(common_src:.c=.d)

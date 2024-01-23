@@ -682,7 +682,7 @@ static void window__cursor_pos_callback(GLFWwindow* glfw_window, double x, doubl
 }
 
 static void window__button_process_input(window_t self, button_t button, bool is_pressed) {
-    debug__writeln("window %s: processing button", self->title);
+    // debug__writeln("window %s: processing button", self->title);
     controller__button_process_input(&self->controller, button, is_pressed);
 
     button_state_t* button_state = &self->controller.buttons[button];
@@ -742,11 +742,15 @@ static void window__cursor_scroll_callback(GLFWwindow* glfw_window, double xoffs
 static void window__drop_callback(GLFWwindow* glfw_window, int paths_size, const char** paths) {
     (void) glfw_window;
 
+    debug__lock();
+
     debug__writeln("files dropped:");
     for (uint32_t path_index = 0; path_index < (uint32_t) paths_size; ++path_index) {
         debug__writeln("  %s", paths[path_index]);
     }
     debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
+
+    debug__unlock();
 }
 
 static void controller__button_process_input(controller_t* self, button_t button, bool is_pressed) {
@@ -754,6 +758,8 @@ static void controller__button_process_input(controller_t* self, button_t button
 
     const bool was_down = button_state->ended_down;
     button_state->ended_down = is_pressed;
+    debug__lock();
+
     if (
         (is_pressed && !was_down) ||
         (!is_pressed && was_down)
@@ -772,6 +778,8 @@ static void controller__button_process_input(controller_t* self, button_t button
         debug__writeln("button repeats %u", button_state->n_of_repeats);
     }
     debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
+
+    debug__unlock();
 }
 
 static void controller__button_process_axes(controller_t* self, button_t button, uint32_t axes_index, float value) {

@@ -27,15 +27,16 @@ enum token_type {
     TOKEN_RIGHT_PAREN,
 
     TOKEN_STRING,
-    TOKEN_NUMBER, /* -2  2.2  .3 */
+    TOKEN_S32, /* 2 -2 */
+    TOKEN_R32, /* -2.  2.2  .3 */
 
     TOKEN_VERSION,
-
     TOKEN_POSITION,
     TOKEN_NORMAL,
     TOKEN_TEXTURE_2D,
     TOKEN_MATERIAL,
     TOKEN_INDEX,
+    TOKEN_GEOMETRY,
 
     TOKEN_COMMENT,
 
@@ -57,5 +58,8 @@ void scanner__create(scanner_t* self, const char* source, size_t source_len);
 token_t scanner__next_token(scanner_t* self);
 
 const char* token_type__to_str(token_type_t token_type);
+
+float   token__to_r32(token_t* self);
+int32_t token__to_s32(token_t* self);
 
 #endif // SCAN_H

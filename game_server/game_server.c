@@ -19,6 +19,8 @@ game_server_t game_server__create(game_server_config_t config, uint16_t port) {
     if (!game_state) {
         return 0;
     }
+    debug__lock();
+
     debug__writeln("game state created");
 
     tp_socket_t tp_socket;
@@ -52,6 +54,8 @@ game_server_t game_server__create(game_server_config_t config, uint16_t port) {
     game_server__push_stage(result, &loop_stage__sleep_till_end_of_frame);
 
     debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_INFO);
+
+    debug__unlock();
 
     return result;
 }

@@ -28,7 +28,6 @@ game_client_t game_client__create(game_client_config_t config, uint16_t client_p
         "created udp socket on port %u", client_port
     );
 
-
     network_addr_t server_addr;
     if (!network_addr__create(&server_addr, server_ip, server_port)) {
         return false;

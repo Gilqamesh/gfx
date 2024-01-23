@@ -374,6 +374,9 @@ static bool vk__get_required_extensions() {
     vkEnumerateInstanceExtensionProperties(0, &supported_vk_extension_count, 0);
     VkExtensionProperties* supported_vk_extensions = malloc(supported_vk_extension_count * sizeof(*supported_vk_extensions));
     vkEnumerateInstanceExtensionProperties(0, &supported_vk_extension_count, supported_vk_extensions);
+
+    debug__lock();
+
     debug__writeln("unsupported Vulkan extensions by GLFW:");
     bool found_unsupported_extension = false;
     for (uint32_t supported_vk_extension_index = 0; supported_vk_extension_index < supported_vk_extension_count; ++supported_vk_extension_index) {
@@ -393,6 +396,9 @@ static bool vk__get_required_extensions() {
         debug__writeln("---");
     }
     debug__flush(DEBUG_MODULE_VULKAN, DEBUG_WARN);
+
+    debug__unlock();
+    
     free(supported_vk_extensions);
 #endif
 

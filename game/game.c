@@ -23,7 +23,13 @@ game_t game__create() {
 
     // todo: game__update tests to measure the upper-bound for game__update_upper_bound?
 
+    debug__write_and_flush(DEBUG_MODULE_GAME, DEBUG_INFO, "loading images...");
+
     if (!game__load_images(result)) {
+        return 0;
+    }
+
+    if (!game__init_textures(result)) {
         return 0;
     }
 
@@ -32,9 +38,13 @@ game_t game__create() {
         return 0;
     }
 
+    debug__write_and_flush(DEBUG_MODULE_GAME, DEBUG_INFO, "loading game objects...");
+
     if (!game__init_game_objects(result)) {
         return 0;
     }
+
+    debug__write_and_flush(DEBUG_MODULE_GAME, DEBUG_INFO, "finished initializing");
 
     return result;
 }
@@ -71,6 +81,7 @@ double game__update_upper_bound(game_t self) {
 }
 
 void game__update(game_t self, controller_t* controller, double s) {
+    self->time += s;
 
     system__usleep(100);
 
@@ -83,7 +94,13 @@ void game__render(game_t self, double factor) {
     geometry_object__draw(
         &self->geometry,
         &self->shader,
-        vertex_stream_specification(3, PRIMITIVE_TYPE_TRIANGLE, 0)
+        vertex_stream_specification(
+            // PRIMITIVE_TYPE_TRIANGLE,
+            PRIMITIVE_TYPE_POINT,
+            3, 0,
+            5, 0
+        ),
+        self
     );
     (void) factor;
 }
