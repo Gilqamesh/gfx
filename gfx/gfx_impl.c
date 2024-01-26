@@ -3,12 +3,15 @@ struct         gfx;
 typedef struct button_state button_state_t;
 typedef struct gfx          gfx_t;
 
+#define BUTTON_ENDED_DOWN_MINIMUM_VALUE_FOR_PRESSED 0.25f
+
 struct button_state {
     uint32_t n_of_transitions;
     uint32_t n_of_repeats;
     void     (*action_on_button_down)(void*);
     void*    user_pointer;
-    bool     ended_down;
+    // bool     ended_down;
+    float    ended_down_value;
 
     /**
      * @todo: add state for shortcut customization
@@ -20,7 +23,6 @@ struct controller {
     button_state_t buttons[_BUTTON_SIZE];
     bool           is_connected;
     bool           received_button_input;
-    float          axes[ARRAY_SIZE(((GLFWgamepadstate*)(0))->axes)];
     double         cursor_x;
     double         cursor_y;
 };
@@ -103,7 +105,7 @@ static void window__button_default_action_debug_info_message_toggle(void* user_p
 static void window__button_default_action_get_clipboard(void* user_pointer);
 static void window__button_default_action_set_clipboard(void* user_pointer);
 static void window__cursor_pos_callback(GLFWwindow* glfw_window, double x, double y);
-static void window__button_process_input(window_t self, button_t button, bool is_pressed);
+static void window__button_process_input(window_t self, button_t button, float pressed_value);
 static void window__cursor_enter_callback(GLFWwindow* glfw_window, int entered);
 static void window__cursor_button_callback(GLFWwindow* glfw_window, int button, int action, int mods);
 static void window__cursor_scroll_callback(GLFWwindow* glfw_window, double xoffset, double yoffset);
@@ -116,8 +118,7 @@ static void window__set_maximized(window_t self, bool value);
 static bool window__get_maximized(window_t self);
 static void window__restore_content_area(window_t self);
 
-static void controller__button_process_input(controller_t* self, button_t button, bool is_pressed);
-static void controller__button_process_axes(controller_t* self, button_t button, uint32_t axes_index, float value);
+static void controller__button_process_input(controller_t* self, button_t button, float pressed_value);
 static void controller__clear(controller_t* self);
 static void controller__set_connected(controller_t* self, bool value);
 static bool controller__get_connected(controller_t* self);
@@ -179,11 +180,11 @@ static void gfx__poll_controllers() {
             glfwGetGamepadState(controller_index, &state);
             for (uint32_t button_index = 0; button_index < ARRAY_SIZE(state.buttons); ++button_index) {
                 button_t button = glfw_gamepad_button_to_button[button_index];
-                controller__button_process_input(controller, button, state.buttons[button_index] == GLFW_PRESS);
+                controller__button_process_input(controller, button, state.buttons[button_index] == GLFW_PRESS ? 1.0f : 0.0f);
             }
             for (uint32_t axis_index = 0; axis_index < ARRAY_SIZE(state.axes); ++axis_index) {
                 button_t button = glfw_gamepad_axis_to_button[axis_index];
-                controller__button_process_axes(controller, button, axis_index, state.axes[axis_index]);
+                controller__button_process_input(controller, button, state.axes[axis_index]);
             }
         }
     }
@@ -505,7 +506,8 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
     window_t window = window__from_glfw_window(glfw_window);
     button_t button = _BUTTON_SIZE;
 
-    const bool is_pressed           = action == GLFW_PRESS || action == GLFW_REPEAT;
+    const int32_t is_pressed        = action == GLFW_PRESS || action == GLFW_REPEAT ? 1 : 0;
+    const float pressed_value       = is_pressed * 1.0f;
     const bool is_shift_down        = mods & GLFW_MOD_SHIFT;
     const bool is_ctrl_down         = mods & GLFW_MOD_CONTROL;
     const bool is_alt_down          = mods & GLFW_MOD_ALT;
@@ -554,7 +556,8 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
             button = BUTTON_DOWN;
         }
     } break ;
-    case GLFW_KEY_CAPS_LOCK: button = BUTTON_CAPS_LOCK; break ; case GLFW_KEY_LEFT_SHIFT: button = BUTTON_SHIFT; break ; case GLFW_KEY_RIGHT_SHIFT: button = BUTTON_SHIFT; break ;
+    case GLFW_KEY_CAPS_LOCK: button = BUTTON_CAPS_LOCK; break ; case GLFW_KEY_LEFT_SHIFT: button = BUTTON_LSHIFT; break ; case GLFW_KEY_RIGHT_SHIFT: button = BUTTON_RSHIFT; break ;
+    case GLFW_KEY_LEFT_CONTROL: button = BUTTON_LCTRL; break ; case GLFW_KEY_RIGHT_CONTROL: button = BUTTON_RCTRL; break ;
     case GLFW_KEY_SPACE: button = BUTTON_SPACE; break ;
     case GLFW_KEY_BACKSPACE: {
         if (is_alt_down) {
@@ -598,7 +601,7 @@ static void window__key_callback(GLFWwindow* glfw_window, int key, int platform_
         return ;
     }
 
-    window__button_process_input(window, button, is_pressed);
+    window__button_process_input(window, button, pressed_value);
 }
 
 static void window__utf32_callback(GLFWwindow* window, uint32_t utf32) {
@@ -681,12 +684,15 @@ static void window__cursor_pos_callback(GLFWwindow* glfw_window, double x, doubl
     window->controller.cursor_y = y;
 }
 
-static void window__button_process_input(window_t self, button_t button, bool is_pressed) {
+static void window__button_process_input(window_t self, button_t button, float pressed_value) {
     // debug__writeln("window %s: processing button", self->title);
-    controller__button_process_input(&self->controller, button, is_pressed);
+    controller__button_process_input(&self->controller, button, pressed_value);
 
     button_state_t* button_state = &self->controller.buttons[button];
-    if (is_pressed && button_state->action_on_button_down) {
+    if (
+        controller__button_is_down(&self->controller, button) && 
+        button_state->action_on_button_down
+    ) {
         button_state->action_on_button_down(button_state->user_pointer);
     }
 }
@@ -753,51 +759,25 @@ static void window__drop_callback(GLFWwindow* glfw_window, int paths_size, const
     debug__unlock();
 }
 
-static void controller__button_process_input(controller_t* self, button_t button, bool is_pressed) {
+static void controller__button_process_input(controller_t* self, button_t button, float pressed_value) {
     button_state_t* button_state = &self->buttons[button];
 
-    const bool was_down = button_state->ended_down;
-    button_state->ended_down = is_pressed;
+    const float ended_down_value = button_state->ended_down_value;
+    button_state->ended_down_value = pressed_value;
     debug__lock();
 
-    if (
-        (is_pressed && !was_down) ||
-        (!is_pressed && was_down)
-    ) {
+    if (pressed_value != ended_down_value) {
         self->received_button_input = true;
         ++button_state->n_of_transitions;
-        debug__writeln(
-            "button transition [%s]: %s -> %s",
-            button__to_str(button),
-            was_down ? "pressed" : "released",
-            is_pressed ? "pressed" : "released"
-        );
+        debug__writeln("button transition [%s]: %.1f -> %.1f", button__to_str(button), ended_down_value, pressed_value);
     }
-    if (is_pressed) {
+    if (pressed_value > BUTTON_ENDED_DOWN_MINIMUM_VALUE_FOR_PRESSED) {
         ++button_state->n_of_repeats;
         debug__writeln("button repeats %u", button_state->n_of_repeats);
     }
     debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
 
     debug__unlock();
-}
-
-static void controller__button_process_axes(controller_t* self, button_t button, uint32_t axes_index, float value) {
-    button_state_t* button_state = &self->buttons[button];
-
-    ASSERT(axes_index < ARRAY_SIZE(self->axes));
-    if (self->axes[axes_index] != value) {
-        self->received_button_input = true;
-        ++button_state->n_of_transitions;
-        debug__write_and_flush(
-            DEBUG_MODULE_GLFW, DEBUG_INFO,
-            "axes transition [%s]: %f -> %f",
-            button__to_str(button),
-            self->axes[axes_index],
-            value
-        );
-        self->axes[axes_index] = value;
-    }
 }
 
 static void controller__clear(controller_t* self) {
@@ -889,7 +869,8 @@ static const char* button__to_str(button_t button) {
     case BUTTON_N: return "N"; case BUTTON_O: return "O"; case BUTTON_P: return "P"; case BUTTON_Q: return "Q"; case BUTTON_R: return "R"; case BUTTON_S: return "S"; case BUTTON_T: return "T"; case BUTTON_U: return "U"; case BUTTON_V: return "V"; case BUTTON_W: return "W"; case BUTTON_X: return "X"; case BUTTON_Y: return "Y"; case BUTTON_Z: return "Z";
 
     case BUTTON_LEFT: return "LEFT"; case BUTTON_UP: return "UP"; case BUTTON_RIGHT: return "RIGHT"; case BUTTON_DOWN: return "DOWN";
-    case BUTTON_CAPS_LOCK: return "CAPS_LOCK"; case BUTTON_SHIFT: return "SHIFT";
+    case BUTTON_CAPS_LOCK: return "CAPS_LOCK"; case BUTTON_LSHIFT: return "LSHIFT"; case BUTTON_RSHIFT: return "RSHIFT";
+    case BUTTON_LCTRL: return "LCTRL"; case BUTTON_RCTRL: return "RCTRL";
     case BUTTON_SPACE: return "SPACE"; case BUTTON_BACKSPACE: return "BACK_SPACE";
     case BUTTON_ENTER: return "ENTER";
 

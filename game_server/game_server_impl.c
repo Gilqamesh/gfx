@@ -319,6 +319,7 @@ static void game_server__receive_packets(game_server_t self, double time) {
 }
 
 static void game_server__send_packets(game_server_t self) {
+    debug__lock();
     for (uint32_t connection_index = 0; connection_index < self->connections_size; ++connection_index) {
         connection_t* connection = &self->connections[connection_index];
         if (connection->connected) {
@@ -331,16 +332,14 @@ static void game_server__send_packets(game_server_t self) {
             // if (self->sequence_id % 7 != 0) {
                 tp_socket__send_data_to(&self->tp_socket, &packet, sizeof(packet), connection->addr);
                 
-                debug__lock();
-
                 debug__write_raw("SENT PACKET: ");
                 debug__write_packet_raw(&packet);
                 debug__flush(DEBUG_MODULE_GAME_SERVER, DEBUG_NET);
 
-                debug__unlock();
             // }
         }
     }
+    debug__unlock();
     ++self->sequence_id;
 }
 

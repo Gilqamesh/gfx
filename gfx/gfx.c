@@ -6,6 +6,7 @@
 # include <stdlib.h>
 # include <string.h>
 # include <stdio.h>
+# include <math.h>
 
 #if defined(OPENGL)
 # define GLFW_INCLUDE_NONE
@@ -315,11 +316,19 @@ void window__set_windowed_state_content_area(window_t self, int32_t x, int32_t y
     }
 }
 
-void window__get_windowed_state_content_area(window_t self, int32_t* x, int32_t* y, uint32_t* width, uint32_t* height) {
-    *x      = self->content_area_x;
-    *y      = self->content_area_y;
-    *width  = self->content_area_w;
-    *height = self->content_area_h;
+void window__get_windowed_state_content_area(window_t self, int32_t* opt_x, int32_t* opt_y, uint32_t* opt_width, uint32_t* opt_height) {
+    if (opt_x) {
+        *opt_x = self->content_area_x;
+    }
+    if (opt_y) {
+        *opt_y = self->content_area_y;
+    }
+    if (opt_width) {
+        *opt_width  = self->content_area_w;
+    }
+    if (opt_height) {
+        *opt_height = self->content_area_h;
+    }
 }
 
 void window__set_windowed_state_window_area(window_t self, int32_t x, int32_t y, uint32_t width, uint32_t height) {
@@ -444,7 +453,12 @@ controller_t* window__get_controller(window_t self) {
 
 bool controller__button_is_down(controller_t* self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
-    return self->buttons[button].ended_down;
+    return self->buttons[button].ended_down_value > BUTTON_ENDED_DOWN_MINIMUM_VALUE_FOR_PRESSED;
+}
+
+float controller__button_value(controller_t* self, button_t button) {
+    ASSERT(button < _BUTTON_SIZE);
+    return self->buttons[button].ended_down_value;
 }
 
 uint32_t controller__button_n_of_repeats(controller_t* self, button_t button) {

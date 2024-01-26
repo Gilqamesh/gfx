@@ -78,8 +78,12 @@ void debug__writeln(const char* format, ...) {
 void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...) {
     debug__lock();
 
-    if (!debug__get_message_type_availability(message_type)) {
+    if (
+        !debug__get_message_module_availability(module) ||
+        !debug__get_message_type_availability(message_type)
+    ) {
         debug__clear();
+        debug__unlock();
         return ;
     }
 

@@ -77,14 +77,16 @@ static void geometry_object__unbind(geometry_object_t* self);
 static uint32_t gl_type__to_gl(gl_type_t type);
 static uint32_t gl_channel_count__to_gl(gl_channel_count_t channel_count);
 static uint32_t gl_channel_count__to_size(gl_channel_count_t channel_count);
-static uint32_t gl_type_and_channel__to_internal_format(gl_type_t type, gl_channel_count_t channel_count);
+static uint32_t gl_type_and_channel__to_internal_format(gl_type_t type, gl_channel_count_t channel_count, bool is_normalized);
 static GLenum primitive_type__to_gl(primitive_type_t type);
 static bool geometry_object__load_from_g_modelformat(geometry_object_t* self, char* buffer, size_t buffer_size);
 // static void shader_program__bind(shader_program_t* self);
 static uint32_t texture_type__to_gl(texture_type_t type);
+static uint32_t texture_type__to_dimension_size(texture_type_t type);
 static uint32_t texture_wrap_type__to_gl(wrap_type_t type);
 static uint32_t texture_filter_stretch_type__to_gl(filter_stretch_type_t stretch_type);
 static uint32_t texture_filter_sample_type__to_gl(filter_sample_type_t sample_type);
+static uint32_t uniform_block_info__to_gl(uniform_block_info_t info);
 
 // static void gl_buffer__bind(gl_buffer_t* self) {
 //     if (self->is_bound) {
@@ -117,6 +119,8 @@ static uint32_t gl_buffer_type__to_gl(gl_buffer_type_t type) {
     case GL_BUFFER_TYPE_VERTEX:             return GL_ARRAY_BUFFER;
     case GL_BUFFER_TYPE_INDEX:              return GL_ELEMENT_ARRAY_BUFFER;
     case GL_BUFFER_TYPE_TEXTURE:            return GL_TEXTURE_BUFFER;
+    case GL_BUFFER_TYPE_SHADER_STORAGE:     return GL_SHADER_STORAGE_BUFFER;
+    case GL_BUFFER_TYPE_ATOMIC_COUNTER:     return GL_ATOMIC_COUNTER_BUFFER;
     case GL_BUFFER_TYPE_UNIFORM:            return GL_UNIFORM_BUFFER;
     case GL_BUFFER_TYPE_TRANSFORM_FEEDBACK: return GL_TRANSFORM_FEEDBACK_BUFFER;
     case GL_BUFFER_TYPE_FRAMEBUFFER:        return GL_FRAMEBUFFER;
@@ -363,57 +367,109 @@ static uint32_t gl_channel_count__to_size(gl_channel_count_t channel_count) {
     return 0;
 }
 
-static uint32_t gl_type_and_channel__to_internal_format(gl_type_t type, gl_channel_count_t channel_count) {
+static uint32_t gl_type_and_channel__to_internal_format(gl_type_t type, gl_channel_count_t channel_count, bool is_normalized) {
     /**
      * @todo None of these are normalized, there are normalized versions like GL_R8 instead of GL_R8UI in case its necessary in the future
     */
     switch (channel_count) {
     case GL_CHANNEL_COUNT_1: {
-        switch (type) {
-        case GL_TYPE_U8:    return GL_R8UI;
-        case GL_TYPE_U16:   return GL_R16UI;
-        case GL_TYPE_U32:   return GL_R32UI;
-        case GL_TYPE_S8:    return GL_R8I;
-        case GL_TYPE_S16:   return GL_R16I;
-        case GL_TYPE_S32:   return GL_R32I;
-        case GL_TYPE_R32:   return GL_R32F;
-        default: ASSERT(false);
+        if (is_normalized) {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_R8;
+            case GL_TYPE_U16:   return GL_R16;
+            case GL_TYPE_U32:   return GL_R32UI /* should be normalized */;
+            case GL_TYPE_S8:    return GL_R8_SNORM;
+            case GL_TYPE_S16:   return GL_R16_SNORM;
+            case GL_TYPE_S32:   return GL_R32I /* should be normalized */;
+            case GL_TYPE_R32:   return GL_R32F /* should be normalized */;
+            default: ASSERT(false);
+            }
+        } else {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_R8UI;
+            case GL_TYPE_U16:   return GL_R16UI;
+            case GL_TYPE_U32:   return GL_R32UI;
+            case GL_TYPE_S8:    return GL_R8I;
+            case GL_TYPE_S16:   return GL_R16I;
+            case GL_TYPE_S32:   return GL_R32I;
+            case GL_TYPE_R32:   return GL_R32F;
+            default: ASSERT(false);
+            }
         }
     } break ;
     case GL_CHANNEL_COUNT_2: {
-        switch (type) {
-        case GL_TYPE_U8:    return GL_RG8UI;
-        case GL_TYPE_U16:   return GL_RG16UI;
-        case GL_TYPE_U32:   return GL_RG32UI;
-        case GL_TYPE_S8:    return GL_RG8I;
-        case GL_TYPE_S16:   return GL_RG16I;
-        case GL_TYPE_S32:   return GL_RG32I;
-        case GL_TYPE_R32:   return GL_RG32F;
-        default: ASSERT(false);
+        if (is_normalized) {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_RG8;
+            case GL_TYPE_U16:   return GL_RG16;
+            case GL_TYPE_U32:   return GL_RG32UI /* should be normalized */;
+            case GL_TYPE_S8:    return GL_RG8_SNORM;
+            case GL_TYPE_S16:   return GL_RG16_SNORM;
+            case GL_TYPE_S32:   return GL_RG32I /* should be normalized */;
+            case GL_TYPE_R32:   return GL_RG32F /* should be normalized */;
+            default: ASSERT(false);
+            }
+        } else {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_RG8UI;
+            case GL_TYPE_U16:   return GL_RG16UI;
+            case GL_TYPE_U32:   return GL_RG32UI;
+            case GL_TYPE_S8:    return GL_RG8I;
+            case GL_TYPE_S16:   return GL_RG16I;
+            case GL_TYPE_S32:   return GL_RG32I;
+            case GL_TYPE_R32:   return GL_RG32F;
+            default: ASSERT(false);
+            }
         }
     } break ;
     case GL_CHANNEL_COUNT_3: {
-        switch (type) {
-        case GL_TYPE_U8:    return GL_RGB8UI;
-        case GL_TYPE_U16:   return GL_RGB16UI;
-        case GL_TYPE_U32:   return GL_RGB32UI;
-        case GL_TYPE_S8:    return GL_RGB8I;
-        case GL_TYPE_S16:   return GL_RGB16I;
-        case GL_TYPE_S32:   return GL_RGB32I;
-        case GL_TYPE_R32:   return GL_RGB32F;
-        default: ASSERT(false);
+        if (is_normalized) {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_RGB8;
+            case GL_TYPE_U16:   return GL_RGB16;
+            case GL_TYPE_U32:   return GL_RGB32UI /* should be normalized */;
+            case GL_TYPE_S8:    return GL_RGB8_SNORM;
+            case GL_TYPE_S16:   return GL_RGB16_SNORM;
+            case GL_TYPE_S32:   return GL_RGB32I /* should be normalized */;
+            case GL_TYPE_R32:   return GL_RGB32F /* should be normalized */;
+            default: ASSERT(false);
+            }
+        } else {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_RGB8UI;
+            case GL_TYPE_U16:   return GL_RGB16UI;
+            case GL_TYPE_U32:   return GL_RGB32UI;
+            case GL_TYPE_S8:    return GL_RGB8I;
+            case GL_TYPE_S16:   return GL_RGB16I;
+            case GL_TYPE_S32:   return GL_RGB32I;
+            case GL_TYPE_R32:   return GL_RGB32F;
+            default: ASSERT(false);
+            }
         }
     } break ;
     case GL_CHANNEL_COUNT_4: {
-        switch (type) {
-        case GL_TYPE_U8:    return GL_RGBA8UI;
-        case GL_TYPE_U16:   return GL_RGBA16UI;
-        case GL_TYPE_U32:   return GL_RGBA32UI;
-        case GL_TYPE_S8:    return GL_RGBA8I;
-        case GL_TYPE_S16:   return GL_RGBA16I;
-        case GL_TYPE_S32:   return GL_RGBA32I;
-        case GL_TYPE_R32:   return GL_RGBA32F;
-        default: ASSERT(false);
+        if (is_normalized) {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_RGBA8;
+            case GL_TYPE_U16:   return GL_RGBA16;
+            case GL_TYPE_U32:   return GL_RGBA32UI /* should be normalized */;
+            case GL_TYPE_S8:    return GL_RGBA8_SNORM;
+            case GL_TYPE_S16:   return GL_RGBA16_SNORM;
+            case GL_TYPE_S32:   return GL_RGBA32I /* should be normalized */;
+            case GL_TYPE_R32:   return GL_RGBA32F /* should be normalized */;
+            default: ASSERT(false);
+            }
+        } else {
+            switch (type) {
+            case GL_TYPE_U8:    return GL_RGBA8UI;
+            case GL_TYPE_U16:   return GL_RGBA16UI;
+            case GL_TYPE_U32:   return GL_RGBA32UI;
+            case GL_TYPE_S8:    return GL_RGBA8I;
+            case GL_TYPE_S16:   return GL_RGBA16I;
+            case GL_TYPE_S32:   return GL_RGBA32I;
+            case GL_TYPE_R32:   return GL_RGBA32F;
+            default: ASSERT(false);
+            }
         }
     } break ;
     default: ASSERT(false);
@@ -455,16 +511,32 @@ static uint32_t texture_type__to_gl(texture_type_t type) {
     case TEXTURE_TYPE_3D:             return GL_TEXTURE_3D;
     case TEXTURE_TYPE_CUBE_MAP:       return GL_TEXTURE_CUBE_MAP;
     case TEXTURE_TYPE_CUBE_MAP_ARRAY: return GL_TEXTURE_CUBE_MAP_ARRAY;
+    case TEXTURE_TYPE_BUFFER:         return GL_TEXTURE_BUFFER;
     default: ASSERT(false);
     }
 
     return 0;
 }
 
+static uint32_t texture_type__to_dimension_size(texture_type_t type) {
+    switch (type) {
+    case TEXTURE_TYPE_1D:             return 1;
+    case TEXTURE_TYPE_1D_ARRAY:       return 2;
+    case TEXTURE_TYPE_2D:             return 2;
+    case TEXTURE_TYPE_2D_ARRAY:       return 3;
+    case TEXTURE_TYPE_3D:             return 3;
+    case TEXTURE_TYPE_CUBE_MAP:       return 2;
+    case TEXTURE_TYPE_CUBE_MAP_ARRAY: return 3;
+    case TEXTURE_TYPE_BUFFER:         return 1;
+    default: ASSERT(false);
+    }
+}
+
 static uint32_t texture_wrap_type__to_gl(wrap_type_t type) {
     switch (type) {
     case WRAP_TYPE_REPEAT:          return GL_REPEAT;
     case WRAP_TYPE_MIRRORED_REPEAT: return GL_MIRRORED_REPEAT;
+    case WRAP_TYPE_MIRROR_ONCE:     return GL_MIRROR_CLAMP_TO_EDGE;
     case WRAP_TYPE_CLAMP_TO_EDGE:   return GL_CLAMP_TO_EDGE;
     case WRAP_TYPE_CLAMP_TO_BORDER: return GL_CLAMP_TO_BORDER;
     default: ASSERT(false);
@@ -484,13 +556,25 @@ static uint32_t texture_filter_stretch_type__to_gl(filter_stretch_type_t stretch
 }
 
 static uint32_t texture_filter_sample_type__to_gl(filter_sample_type_t sample_type) {
-    // note: choose nearest mipmap instead of lerping between two
-    // GL_NEAREST_MIPMAP_NEAREST;
-    // GL_NEAREST_MIPMAP_LINEAR;
-
     switch (sample_type) {
-    case FILTER_SAMPLE_TYPE_NEAREST: return GL_LINEAR_MIPMAP_NEAREST;
-    case FILTER_SAMPLE_TYPE_LINEAR:  return GL_LINEAR_MIPMAP_LINEAR;
+    case FILTER_SAMPLE_TYPE_NEAREST:                return GL_NEAREST;
+    case FILTER_SAMPLE_TYPE_LINEAR:                 return GL_LINEAR;
+    case FILTER_SAMPLE_TYPE_NEAREST_MIPMAP_NEAREST: return GL_NEAREST_MIPMAP_NEAREST;
+    case FILTER_SAMPLE_TYPE_NEAREST_MIPMAP_LINEAR:  return GL_NEAREST_MIPMAP_LINEAR;
+    case FILTER_SAMPLE_TYPE_LINEAR_MIPMAP_NEAREST:  return GL_LINEAR_MIPMAP_NEAREST;
+    case FILTER_SAMPLE_TYPE_LINEAR_MIPMAP_LINEAR:   return GL_LINEAR_MIPMAP_LINEAR;
+    default: ASSERT(false);
+    }
+
+    return 0;
+}
+
+static uint32_t uniform_block_info__to_gl(uniform_block_info_t info) {
+    switch (info) {
+    case UNIFORM_BLOCK_INFO_ARRAY_SIZE:    return GL_UNIFORM_SIZE;
+    case UNIFORM_BLOCK_INFO_OFFSET:        return GL_UNIFORM_OFFSET;
+    case UNIFORM_BLOCK_INFO_ARRAY_STRIDE:  return GL_UNIFORM_ARRAY_STRIDE;
+    case UNIFORM_BLOCK_INFO_MATRIX_STRIDE: return GL_UNIFORM_MATRIX_STRIDE;
     default: ASSERT(false);
     }
 

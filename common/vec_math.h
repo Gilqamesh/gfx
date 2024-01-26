@@ -14,7 +14,7 @@ struct         quat;
 typedef struct vec2   vec2_t;
 typedef struct vec3   vec3_t;
 typedef struct vec4   vec4_t;
-typedef struct mat4   mat4_t;
+typedef struct mat4   mat4_t; // column major 4x4 matrix
 typedef struct quat   quat_t;
 
 struct vec2   { float _[2]; };
@@ -286,25 +286,38 @@ static inline mat4_t mat4__rot(vec3_t axis, float angle) {
     return result;
 }
 static inline void   mat4__scale(mat4_t* self, vec3_t b) { self->_[0] *= b._[0]; self->_[5] *= b._[1]; self->_[10] *= b._[2]; }
-static inline mat4_t mat4__look_at(vec3_t eye, vec3_t poi, vec3_t up) {
+static inline mat4_t mat4__look_at(vec3_t eye, vec3_t point_of_interest, vec3_t world_up) {
     mat4_t result = mat4__null();
-    vec3_t forward = vec3__sub(poi, eye);
+    vec3_t forward = vec3__sub(point_of_interest, eye);
     vec3__norm_self(&forward);
-    const vec3_t side = vec3__norm(vec3__outer(forward, up));
-    up = vec3__outer(side, forward);
+    const vec3_t side = vec3__norm(vec3__outer(forward, world_up));
+    world_up = vec3__outer(side, forward);
     result._[0]  = side._[0];
-    result._[1]  = up._[0];
+    result._[1]  = world_up._[0];
     result._[2]  = forward._[0];
     result._[3]  = -eye._[0];
     result._[4]  = side._[1];
-    result._[5]  = up._[1];
+    result._[5]  = world_up._[1];
     result._[6]  = forward._[1];
     result._[7]  = -eye._[1];
     result._[8]  = side._[2];
-    result._[9]  = up._[2];
+    result._[9]  = world_up._[2];
     result._[10] = forward._[2];
     result._[11] = -eye._[2];
     result._[15] = 1.0f;
+    // result._[0]  = side._[0];
+    // result._[1]  = side._[1];
+    // result._[2]  = side._[2];
+    // result._[4]  = world_up._[0];
+    // result._[5]  = world_up._[1];
+    // result._[6]  = world_up._[2];
+    // result._[8]  = forward._[0];
+    // result._[9]  = forward._[1];
+    // result._[10] = forward._[2];
+    // result._[12] = -eye._[0];
+    // result._[13] = -eye._[1];
+    // result._[14] = -eye._[2];
+    // result._[15] = 1.0f;
     return result;
 }
 //! @brief Perspective projection matrix defined by a frustum
@@ -318,12 +331,19 @@ static inline mat4_t mat4__perspective_frustum(float left, float right, float bo
     result._[10] = (near + far) / (near - far);
     result._[11] = 2.0f * near * far / (near - far);
     result._[14] = -1.0f;
+    // result._[0]  = 2.0f * near / (right - left);
+    // result._[5]  = 2.0f * near / (top - bottom);
+    // result._[8]  = (right + left) / (right - left);
+    // result._[9]  = (top + bottom) / (top - bottom);
+    // result._[10] = (near + far) / (near - far);
+    // result._[11] = -1.0f;
+    // result._[14] = 2.0f * near * far / (near - far);
     return result;
 }
 //! @brief Perspective projection matrix defined by an aspect ratio and fov
-static inline mat4_t mat4__perspective_aspect(float fov, float aspect, float near, float far) {
+static inline mat4_t mat4__perspective_aspect(float fov_rad, float aspect, float near, float far) {
     assert(far > near);
-    const float tan_half_of_fov = tan(fov / 2.0f);
+    const float tan_half_of_fov = tan(fov_rad / 2.0f);
     mat4_t result = mat4__null();
     result._[0]  = 1.0f / (aspect * tan_half_of_fov);
     result._[5]  = 1.0f / tan_half_of_fov;

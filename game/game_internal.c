@@ -13,12 +13,19 @@ struct game {
     image_t        window_icon_image;
     image_t        cursor_image;
 
+    window_t       window;
+
+    vec3_t         position;
+    vec3_t         orientation;
+
     geometry_object_t         geometry;
     shader_program_t          vs_program;
     shader_program_t          fs_program;
     shader_program_pipeline_t shader;
     gl_buffer_t               vertex_buffer;
     // gl_buffer_t       color_buffer;
+    // gl_buffer_t               texture_buffer;
+    gl_buffer_t               uniform_block_buffer;
     texture_t                 texture;
     texture_sampler_t         texture_sampler_1;
     texture_sampler_t         texture_sampler_2;
@@ -29,8 +36,8 @@ static bool game__init_game_objects(game_t self);
 static bool game__load_shaders(game_t self);
 static bool game__init_textures(game_t self);
 static bool shader__create_from_file(shader_object_t* self, const char* path, shader_type_t shader_type);
-static void shader_program__vs_callback(shader_program_t* self, void* data);
-static void shader_program__fs_callback(shader_program_t* self, void* data);
+static void shader_program__vs_predraw_callback(shader_program_t* self, void* data);
+static void shader_program__fs_predraw_callback(shader_program_t* self, void* data);
 
 static bool game__load_images(game_t self) {
     int number_of_channels_per_pixel;
@@ -47,14 +54,20 @@ static bool game__load_images(game_t self) {
 }
 
 static bool game__init_game_objects(game_t self) {
-    // gl__set_cull_mode(CULL_MODE_DISABLED);
+    gl_buffer__create(&self->uniform_block_buffer, 0, 160, GL_BUFFER_TYPE_UNIFORM, GL_BUFFER_ACCESS_TYPE_WRITE);
+
+    gl__set_cull_mode(CULL_MODE_DISABLED);
     const float vertices[] = {
-        0.5, -0.5,
-        0.0, 0.5,
+        1, -1.0f,
+        0.0, 1.0f,
+        -1.0f, -1.0f,
+        // 0.0f, 0.0f, 1.0f,
+        // 0.0f, 1.0f, 0.0f,
+        // 0.0f, 1.0f, 1.0f
+        1.5, 1.5,
+        1.5, -0.5,
         -0.5, -0.5,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 1.0f
+        -0.5, 1.5
     };
     // const float colors[] = {
     //     0.0f, 0.0f, 1.0f,
@@ -65,30 +78,32 @@ static bool game__init_game_objects(game_t self) {
     gl_buffer__create(&self->vertex_buffer, vertices, sizeof(vertices), GL_BUFFER_TYPE_VERTEX, GL_BUFFER_ACCESS_TYPE_READ);
     // gl_buffer__create(&self->color_buffer, colors, sizeof(colors), GL_BUFFER_TYPE_VERTEX, GL_BUFFER_ACCESS_TYPE_READ);
 
-    if (!game__load_shaders(self)) {
-        return false;
-    }
-
-    geometry_object__create_from_file(&self->geometry, "game/models/1.g_modelformat");
+    // geometry_object__create_from_file(&self->geometry, "game/models/1.g_modelformat");
 
     geometry_object__create(&self->geometry);
 
     const uint32_t pos_attribute_index = 0;
-    const uint32_t col_attribute_index = 1;
+    // const uint32_t col_attribute_index = 1;
+    const uint32_t tex_attribute_index = 1;
     const uint32_t pos_vertex_binding_index = 0;
-    const uint32_t col_vertex_binding_index = 1;
+    // const uint32_t col_vertex_binding_index = 1;
+    const uint32_t tex_vertex_binding_index = 1;
 
     geometry_object__enable_vertex_attribute_format(&self->geometry, pos_attribute_index, true);
-    geometry_object__enable_vertex_attribute_format(&self->geometry, col_attribute_index, true);
+    // geometry_object__enable_vertex_attribute_format(&self->geometry, col_attribute_index, true);
+    geometry_object__enable_vertex_attribute_format(&self->geometry, tex_attribute_index, true);
 
     geometry_object__define_vertex_attribute_format(&self->geometry, pos_attribute_index, GL_TYPE_R32, GL_CHANNEL_COUNT_2, false, 0);
-    geometry_object__define_vertex_attribute_format(&self->geometry, col_attribute_index, GL_TYPE_R32, GL_CHANNEL_COUNT_3, false, 2);
+    // geometry_object__define_vertex_attribute_format(&self->geometry, col_attribute_index, GL_TYPE_R32, GL_CHANNEL_COUNT_3, false, 2);
+    geometry_object__define_vertex_attribute_format(&self->geometry, tex_attribute_index, GL_TYPE_R32, GL_CHANNEL_COUNT_2, false, 0);
 
     geometry_object__set_vertex_buffer_for_binding(&self->geometry, &self->vertex_buffer, pos_vertex_binding_index, 0, sizeof(float) * 2);
-    geometry_object__set_vertex_buffer_for_binding(&self->geometry, &self->vertex_buffer, col_vertex_binding_index, 6 * sizeof(float), sizeof(float) * 3);
+    // geometry_object__set_vertex_buffer_for_binding(&self->geometry, &self->vertex_buffer, col_vertex_binding_index, 6 * sizeof(float), sizeof(float) * 3);
+    geometry_object__set_vertex_buffer_for_binding(&self->geometry, &self->vertex_buffer, tex_vertex_binding_index, 6 * sizeof(float), sizeof(float) * 2);
 
     geometry_object__associate_binding(&self->geometry, pos_attribute_index, pos_vertex_binding_index);
-    geometry_object__associate_binding(&self->geometry, col_attribute_index, col_vertex_binding_index);
+    // geometry_object__associate_binding(&self->geometry, tex_attribute_index, col_vertex_binding_index);
+    geometry_object__associate_binding(&self->geometry, tex_attribute_index, tex_vertex_binding_index);
 
     return true;
 }
@@ -141,8 +156,8 @@ static bool game__load_shaders(game_t self) {
             return false;
         }
 
-        shader_program__set_predraw_callback(&self->vs_program, &shader_program__vs_callback);
-        shader_program__set_predraw_callback(&self->fs_program, &shader_program__fs_callback);
+        shader_program__set_predraw_callback(&self->vs_program, &shader_program__vs_predraw_callback);
+        shader_program__set_predraw_callback(&self->fs_program, &shader_program__fs_predraw_callback);
 
         shader_program__attach(&self->vs_program, &vertex_shader);
         shader_program__attach(&self->fs_program, &fragment_shader);
@@ -190,21 +205,60 @@ static bool game__load_shaders(game_t self) {
 }
 
 static bool game__init_textures(game_t self) {
-    int number_of_channels_per_pixel;
-    image_t image;
-    image.data = stbi_load("game/textures/wood.jpg", (int32_t*) &image.w, (int32_t*) &image.h, &number_of_channels_per_pixel, 0);
-    if (!image.data) {
-        return false;
-    }
+    // const uint32_t texture_width = 256;
+    // const uint32_t texture_height = 256;
+    // const uint32_t texture_channels = 3;
+    // gl_buffer__create(
+    //     &self->texture_buffer,
+    //     0, texture_width * texture_height * texture_channels * sizeof(float),
+    //     GL_BUFFER_TYPE_TEXTURE, GL_BUFFER_ACCESS_TYPE_WRITE
+    // );
 
-    if (!texture__create(
-        &self->texture,
-        TEXTURE_TYPE_2D, GL_TYPE_U8, number_of_channels_per_pixel, 1,
-        image.data, image.w, image.h, 0
-    )) {
-        return false;
+    // if (!texture__create(
+    //     &self->texture,
+    //     TEXTURE_TYPE_BUFFER, GL_TYPE_R32, texture_channels, true, 1,
+    //     0, texture_width, texture_height, 0
+    // )) {
+    //     return false;
+    // }
+    // float* texture_buffer_data = (float*) gl_buffer__map(&self->texture_buffer, self->texture_buffer.size, 0);
+    // ASSERT(texture_buffer_data);
+    // for (uint32_t height = 0; height < texture_height; ++height) {
+    //     float* texel = texture_buffer_data;
+    //     for (uint32_t width = 0; width < texture_width; ++width) {
+    //         for (uint32_t channel = 0; channel < texture_channels; ++channel) {
+    //             *texel++ = 1.0f / (channel + 1);
+    //         }
+    //     }
+    // }
+    // gl_buffer__unmap(&self->texture_buffer);
+    // texture__attach_buffer(&self->texture, &self->texture_buffer, 0, self->texture_buffer.size);
+
+    const uint32_t wood_indices = 3;
+
+    for (uint32_t wood_index = 0; wood_index < wood_indices; ++wood_index) {
+        int number_of_channels_per_pixel;
+        image_t image;
+        char texture_path[256];
+        snprintf(texture_path, ARRAY_SIZE(texture_path), "game/textures/wood%u.jpg", wood_index);
+        image.data = stbi_load(texture_path, (int32_t*) &image.w, (int32_t*) &image.h, &number_of_channels_per_pixel, 0);
+        if (!image.data) {
+            return false;
+        };
+
+        if (wood_index == 0) {
+            if (!texture__create(
+                &self->texture,
+                TEXTURE_TYPE_2D_ARRAY, GL_TYPE_U8, number_of_channels_per_pixel, true, 1,
+                0, image.w, image.h, wood_indices
+            )) {
+                return false;
+            }
+        }
+        texture__write(&self->texture, 0, 0, wood_index, image.data, image.w, image.h, 1);
+
+        free(image.data);
     }
-    free(image.data);
 
     if (!texture_sampler__create(&self->texture_sampler_1)) {
         return false;
@@ -212,7 +266,9 @@ static bool game__init_textures(game_t self) {
     if (!texture_sampler__create(&self->texture_sampler_2)) {
         return false;
     }
-    texture_sampler__set_wrapping(&self->texture_sampler_2, WRAP_DIRECTION_WIDTH, WRAP_TYPE_CLAMP_TO_BORDER);
+    texture_sampler__set_wrapping(&self->texture_sampler_1, WRAP_DIRECTION_WIDTH | WRAP_DIRECTION_HEIGHT, WRAP_TYPE_MIRROR_ONCE);
+    texture_sampler__set_wrapping(&self->texture_sampler_2, WRAP_DIRECTION_WIDTH | WRAP_DIRECTION_HEIGHT, WRAP_TYPE_CLAMP_TO_EDGE);
+    // texture_sampler__set_wrapping_border_color(&self->texture_sampler_2, 0.0f, 1.0f, 0.0f, 1.0f);
 
     return true;
 }
@@ -252,15 +308,74 @@ static bool shader__create_from_file(shader_object_t* self, const char* path, sh
     return result;
 }
 
-static void shader_program__vs_callback(shader_program_t* self, void* data) {
-    game_t game =  (game_t) data;
+static void shader_program__vs_predraw_callback(shader_program_t* self, void* data) {
+    game_t game = (game_t) data;
+
+    uint32_t vs_common_location = 0;
+    if (!shader_program__get_uniform_block_location(self, "COMMON", &vs_common_location)) {
+        return ;
+    }
+    const uint32_t vs_common_binding = 0;
+    shader_program__set_uniform_block_binding(self, vs_common_location, vs_common_binding);
+    const uint32_t vs_common_members_count = 2;
+    const char* vs_common_member_names[] = {
+        "COMMON.offset",
+        "COMMON.mvp",
+    };
+    uint32_t vs_common_member_indices[vs_common_members_count];
+    shader_program__get_uniform_block_member_locations(
+        self,
+        vs_common_members_count, vs_common_member_names, vs_common_member_indices
+    );
+    uint32_t vs_common_member_offsets[2];
+    shader_program__get_uniform_block_info(
+        self,
+        UNIFORM_BLOCK_INFO_OFFSET,
+        vs_common_members_count, vs_common_member_indices, vs_common_member_offsets
+    );
+    uint32_t vs_common_member_matrix_strides[2];
+    shader_program__get_uniform_block_info(
+        self,
+        UNIFORM_BLOCK_INFO_MATRIX_STRIDE,
+        vs_common_members_count, vs_common_member_indices, vs_common_member_matrix_strides
+    );
+    uint8_t* vs_common_data = gl_buffer__map(&game->uniform_block_buffer, game->uniform_block_buffer.size, 0);
+    // mat4_t model_m = mat4__id();
+    mat4_t view_m = mat4__look_at(game->position, vec3(0.0f, 3.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+    // mat4_t proj_m = mat4__perspective_frustum(-10.0f, 10.0f, -10.0f, 10.0f, -10.0f, 10.0f);
+    uint32_t window_width;
+    uint32_t window_height;
+    window__get_windowed_state_content_area(game->window, 0, 0, &window_width, &window_height);
+    mat4_t proj_m = mat4__perspective_aspect(3.1415f / 3.0f, (float) window_width / (float) window_height, -1.0f, 100.0f);
+    mat4_t mvp = mat4__mul(proj_m, view_m);
+    // mvp = mat4__mul(mvp, );
+    for (uint32_t row = 0; row < 4; ++row) {
+        uint32_t offset = vs_common_member_offsets[1] + row * vs_common_member_matrix_strides[1];
+        for (uint32_t col = 0; col < 4; ++col) {
+            *((float*) (vs_common_data + offset)) = mvp._[row * 4 + col];
+            offset += sizeof(float);
+        }
+    }
+    gl_buffer__unmap(&game->uniform_block_buffer);
+    gl_buffer__bind(&game->uniform_block_buffer, vs_common_binding, 0, game->uniform_block_buffer.size);
+
     uint32_t subroutine_index = ((uint32_t) game->time) % 2 == 0 ? 1 : 2;
     shader_program__set_uniform_subroutine(self, SHADER_TYPE_VERTEX, subroutine_index);
 }
 
-static void shader_program__fs_callback(shader_program_t* self, void* data) {
-    game_t game =  (game_t) data;
-
+static void shader_program__fs_predraw_callback(shader_program_t* self, void* data) {
+    game_t game = (game_t) data;
     (void) game;
-    (void) self;
+
+    const uint32_t texture_unit = 0;
+
+    texture_sampler_t* sampler = ((uint32_t) game->time) % 2 == 0 ? &game->texture_sampler_2 : &game->texture_sampler_1;
+    texture__bind(&game->texture, sampler, texture_unit);
+
+    // (void) self;
+    uint32_t texture_sampler_location = 0;
+    if (!shader_program__get_uniform_location(self, "texture_sampler", &texture_sampler_location)) {
+        return ;
+    }
+    shader_program__set_uniform_i(self, texture_sampler_location, texture_unit);
 }

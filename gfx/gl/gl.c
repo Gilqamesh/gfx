@@ -17,7 +17,6 @@ bool gl__init_context() {
     // glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glEnable(GL_CULL_FACE);
     glDebugMessageCallback(&gl__error_message_callback, 0);
-
     // note: to set point size programmatically
     glEnable(GL_PROGRAM_POINT_SIZE);
 
@@ -29,7 +28,7 @@ bool gl__init_context() {
     glGetIntegerv(GL_MAJOR_VERSION, &major_version);
     glGetIntegerv(GL_MINOR_VERSION, &minor_version);
     debug__write_and_flush(DEBUG_MODULE_GL, DEBUG_INFO, "current context opengl version: %d.%d", major_version, minor_version);
-    
+
     return true;
 }
 
@@ -46,23 +45,21 @@ const char* gl__get_extension_str(uint32_t index) {
 
 void gl_buffer__create(
     gl_buffer_t* self,
-    const void* data, uint32_t size,
+    const void* opt_data, uint32_t size,
     gl_buffer_type_t buffer_type, gl_buffer_access_type_t access_type
 ) {
     memset(self, 0, sizeof(*self));
-
-    ASSERT(data);
 
     self->target = gl_buffer_type__to_gl(buffer_type);
     self->access = gl_buffer_access_type__to_gl(access_type);
     self->size   = size;
 
-    if (self->target == GL_FRAMEBUFFER) {
+    if (buffer_type == GL_BUFFER_TYPE_FRAMEBUFFER) {
         glCreateFramebuffers(1, &self->id);
     } else {
         glCreateBuffers(1, &self->id);
         glNamedBufferStorage(
-            self->id, size, data,
+            self->id, size, opt_data,
             self->access | (self->target & GL_MAP_WRITE_BIT ? GL_DYNAMIC_STORAGE_BIT : 0)
         );
     }
@@ -100,10 +97,10 @@ void gl_buffer__copy(
 
 void gl_buffer__clear(
     gl_buffer_t* self,
-    const void* data, gl_channel_count_t data_channel_count, gl_type_t data_type,
+    const void* data, gl_channel_count_t data_channel_count, gl_type_t data_type, bool is_normalized,
     uint32_t size_to_clear, uint32_t offset_to_clear_from
 ) {
-    glClearNamedBufferSubData(self->id, gl_type_and_channel__to_internal_format(data_type, data_channel_count), offset_to_clear_from, size_to_clear, gl_channel_count__to_gl(data_channel_count), gl_type__to_gl(data_type), data);
+    glClearNamedBufferSubData(self->id, gl_type_and_channel__to_internal_format(data_type, data_channel_count, is_normalized), offset_to_clear_from, size_to_clear, gl_channel_count__to_gl(data_channel_count), gl_type__to_gl(data_type), data);
 }
 
 void* gl_buffer__map(gl_buffer_t* self, uint32_t size, uint32_t offset) {
@@ -113,6 +110,18 @@ void* gl_buffer__map(gl_buffer_t* self, uint32_t size, uint32_t offset) {
 
 void gl_buffer__unmap(gl_buffer_t* self) {
     glUnmapNamedBuffer(self->id);
+}
+
+void gl_buffer__bind(gl_buffer_t* self, uint32_t binding_point, uint32_t offset, uint32_t size) {
+    // todo(david): limit check for binding point
+    // glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS);
+    // glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS);
+    // glGetIntegerv(GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS);
+    // todo:  why is there no max for transform feedback
+    // glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_BUFFER_BINDINGS);
+
+    ASSERT(offset + size <= self->size);
+    glBindBufferRange(self->target, binding_point, self->id, offset, size);
 }
 
 void gl_buffer__set_attached_buffer(gl_buffer_t* self, attached_buffer_t* attached_buffer) {
@@ -302,13 +311,84 @@ void shader_program__set_predraw_callback(shader_program_t* self, shader_program
     self->predraw_callback = predraw_callback;
 }
 
-uint32_t shader_program__get_uniform_subroutine_index(shader_program_t* self, shader_type_t type, const char* name) {
+bool shader_program__get_uniform_location(shader_program_t* self, const char* name, uint32_t* location) {
+    GLint _location = glGetUniformLocation(self->id, name);
+    if (_location == -1) {
+        debug__write_and_flush(DEBUG_MODULE_GL, DEBUG_WARN, "could not retrieve uniform location for symbol: '%s'", name);
+        return false;
+    }
+
+    *location = (uint32_t) _location;
+
+    return true;
+}
+
+bool shader_program__get_uniform_block_location(shader_program_t* self, const char* name, uint32_t* location) {
+    GLuint _location = glGetUniformBlockIndex(self->id, name);
+    if (_location == GL_INVALID_INDEX) {
+        debug__write_and_flush(DEBUG_MODULE_GL, DEBUG_WARN, "could not retrieve uniform block location for symbol: '%s'", name);
+        return false;
+    }
+
+    *location = (uint32_t) _location;
+
+    return true;
+}
+
+void shader_program__set_uniform_i(shader_program_t* self, uint32_t location, int32_t value) {
+    (void) self;
+    glUniform1i(location, value);
+}
+
+void shader_program__set_uniform_iv(shader_program_t* self, uint32_t location, const int32_t* values, uint32_t size) {
+    (void) self;
+    glUniform1iv(location, size, values);
+}
+
+void shader_program__set_uniform_f(shader_program_t* self, uint32_t location, float value) {
+    (void) self;
+    glUniform1f(location, value);
+}
+
+void shader_program__set_uniform_fv(shader_program_t* self, uint32_t location, const float* values, uint32_t size) {
+    (void) self;
+    glUniform1fv(location, size, values);
+}
+
+void shader_program__set_uniform_mat(shader_program_t* self, uint32_t location, const float values[16]) {
+    (void) self;
+    glUniformMatrix4fv(location, 16, GL_FALSE, values);
+}
+
+void shader_program__set_uniform_block_binding(shader_program_t* self, uint32_t location, uint32_t binding) {
+    GLint max_bindings = 0;
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &max_bindings);
+    ASSERT(binding < (uint32_t) max_bindings);
+    glUniformBlockBinding(self->id, location, binding);
+}
+
+void shader_program__get_uniform_block_member_locations(
+    shader_program_t* self,
+    uint32_t n_of_uniforms, const char** names, uint32_t* out_locations
+) {
+    glGetUniformIndices(self->id, n_of_uniforms, names, out_locations);
+}
+
+void shader_program__get_uniform_block_info(
+    shader_program_t* self,
+    uniform_block_info_t info,
+    uint32_t n_of_uniforms, const uint32_t* in_locations, uint32_t* out_infos
+) {
+    glGetActiveUniformsiv(self->id, n_of_uniforms, in_locations, uniform_block_info__to_gl(info), (GLint*) out_infos);
+}
+
+uint32_t shader_program__get_uniform_subroutine(shader_program_t* self, shader_type_t type, const char* name) {
     return glGetProgramResourceIndex(self->id, shader_type__to_gl_subroutine(type), name);
 }
 
-void shader_program__set_uniform_subroutine(shader_program_t* self, shader_type_t type, uint32_t index) {
+void shader_program__set_uniform_subroutine(shader_program_t* self, shader_type_t type, uint32_t location) {
     (void) self;
-    glUniformSubroutinesuiv(shader_type__to_gl(type), 1, &index);
+    glUniformSubroutinesuiv(shader_type__to_gl(type), 1, &location);
 }
 
 bool shader_program_pipeline__create(shader_program_pipeline_t* self) {
@@ -369,87 +449,135 @@ vertex_stream_specification_t vertex_stream_specification(
 
 bool texture__create(
     texture_t* self,
-    texture_type_t texture_type, gl_type_t format_type, gl_channel_count_t format_channel_count, uint32_t mipmap_levels,
-    void* data, uint32_t width, uint32_t height, uint32_t depth
+    texture_type_t texture_type, gl_type_t format_type, gl_channel_count_t format_channel_count, bool is_normalized, uint32_t mipmap_levels,
+    const void* data, uint32_t width, uint32_t height, uint32_t depth
 ) {
-    const uint32_t gl_texture_type = texture_type__to_gl(texture_type);
-    glCreateTextures(gl_texture_type, 1, &self->id);
+    memset(self, 0, sizeof(*self));
 
+    self->dimensions = texture_type__to_dimension_size(texture_type);
+    self->gl_channel_count = gl_channel_count__to_gl(format_channel_count);
+    self->gl_type = gl_type__to_gl(format_type);
+    self->gl_internal_format = gl_type_and_channel__to_internal_format(format_type, format_channel_count, is_normalized);
+
+    glCreateTextures(texture_type__to_gl(texture_type), 1, &self->id);
     if (self->id == 0) {
         return false;
     }
+    if (texture_type == TEXTURE_TYPE_BUFFER) {
+        return true;
+    }
 
-    if (texture_type == TEXTURE_TYPE_1D) {
-        glTexStorage1D(
-            gl_texture_type,
+    if (mipmap_levels == 0) {
+        mipmap_levels = 1;
+    }
+
+    glTextureParameteri(self->id, GL_TEXTURE_BASE_LEVEL, 0);
+    glTextureParameteri(self->id, GL_TEXTURE_MAX_LEVEL, mipmap_levels - 1);
+
+    switch (self->dimensions) {
+    case 1: {
+        glTextureStorage1D(
+            self->id,
             mipmap_levels,
-            gl_type_and_channel__to_internal_format(format_type, format_channel_count),
+            self->gl_internal_format,
             width
         );
-        glTexSubImage1D(
-            gl_texture_type,
-            0,
-            0,
-            width,
-            gl_channel_count__to_gl(format_channel_count),
-            gl_type__to_gl(format_type),
-            data
-        );
-    } else if (
-        texture_type == TEXTURE_TYPE_1D_ARRAY ||
-        texture_type == TEXTURE_TYPE_2D ||
-        texture_type == TEXTURE_TYPE_CUBE_MAP
-    ) {
-        (void) depth;
-        glTexStorage2D(
-            gl_texture_type,
+    } break ;
+    case 2: {
+        glTextureStorage2D(
+            self->id,
             mipmap_levels,
-            gl_type_and_channel__to_internal_format(format_type, format_channel_count),
+            self->gl_internal_format,
             width,
             height
         );
-        glTexSubImage2D(
-            gl_texture_type,
-            0,
-            0,
-            0,
-            width,
-            height,
-            gl_channel_count__to_gl(format_channel_count),
-            gl_type__to_gl(format_type),
-            data
-        );
-    } else if (
-        texture_type == TEXTURE_TYPE_2D_ARRAY ||
-        texture_type == TEXTURE_TYPE_3D ||
-        texture_type == TEXTURE_TYPE_CUBE_MAP_ARRAY
-    ) {
-        glTexStorage3D(
-            gl_texture_type,
+    } break ;
+    case 3: {
+        glTextureStorage3D(
+            self->id,
             mipmap_levels,
-            gl_type_and_channel__to_internal_format(format_type, format_channel_count),
+            self->gl_internal_format,
             width,
             height,
             depth
         );
-        glTexSubImage3D(
-            gl_texture_type,
-            0,
-            0,
-            0,
-            0,
-            width,
-            height,
-            depth,
-            gl_channel_count__to_gl(format_channel_count),
-            gl_type__to_gl(format_type),
-            data
-        );
-    } else {
-        ASSERT(false);
+    } break ;
+    default: ASSERT(false);
+    }
+
+    if (data) {
+        texture__write(self, 0, 0, 0, data, width, height, depth);
+    }
+
+    if (mipmap_levels > 1) {
+        glGenerateTextureMipmap(self->id);
     }
 
     return true;
+}
+
+void texture__destroy(texture_t* self) {
+    glDeleteTextures(1, &self->id);
+}
+
+void texture__write(
+    texture_t* self,
+    uint32_t x_offset, uint32_t y_offset, uint32_t z_offset,
+    const void* data, uint32_t width, uint32_t height, uint32_t depth
+) {
+    switch (self->dimensions) {
+    case 1: {
+        glTextureSubImage1D(
+            self->id,
+            0,
+            x_offset,
+            width,
+            self->gl_channel_count,
+            self->gl_type,
+            data
+        );
+    } break ;
+    case 2: {
+        glTextureSubImage2D(
+            self->id,
+            0,
+            x_offset,
+            y_offset,
+            width,
+            height,
+            self->gl_channel_count,
+            self->gl_type,
+            data
+        );
+    } break ;
+    case 3: {
+        glTextureSubImage3D(
+            self->id,
+            0,
+            x_offset,
+            y_offset,
+            z_offset,
+            width,
+            height,
+            depth,
+            self->gl_channel_count,
+            self->gl_type,
+            data
+        );
+    } break ;
+    default: ASSERT(false);
+    }
+}
+
+void texture__attach_buffer(texture_t* self, gl_buffer_t* buffer, uint32_t buffer_offset, uint32_t buffer_size) {
+    ASSERT(buffer_offset + buffer_size <= buffer->size);
+    // note: offset must be aligned
+    // GLint alignment = 0;
+    // glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &alignment);
+    GLint max_size = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &max_size);
+    ASSERT(buffer_size < (uint32_t) max_size);
+    glTextureBufferRange(self->id, self->gl_internal_format, buffer->id, buffer_offset, buffer_size);
 }
 
 bool texture_sampler__create(texture_sampler_t* self) {
@@ -458,7 +586,7 @@ bool texture_sampler__create(texture_sampler_t* self) {
         return false;
     }
 
-    texture_sampler__set_filtering(self, FILTER_STRETCH_TYPE_MINIFICATION, FILTER_SAMPLE_TYPE_LINEAR);
+    texture_sampler__set_filtering(self, FILTER_STRETCH_TYPE_MINIFICATION, FILTER_SAMPLE_TYPE_LINEAR_MIPMAP_LINEAR);
     texture_sampler__set_filtering(self, FILTER_STRETCH_TYPE_MAGNIFICATION, FILTER_SAMPLE_TYPE_LINEAR);
     texture_sampler__set_wrapping(
         self,
@@ -467,6 +595,10 @@ bool texture_sampler__create(texture_sampler_t* self) {
     );
 
     return true;
+}
+
+void texture_sampler__destroy(texture_sampler_t* self) {
+    glDeleteSamplers(1, &self->id);
 }
 
 void texture_sampler__set_filtering(texture_sampler_t* self, filter_stretch_type_t stretch_type, filter_sample_type_t sample_type) {
@@ -491,14 +623,16 @@ void texture_sampler__set_wrapping_border_color(texture_sampler_t* self, float r
     glSamplerParameterfv(self->id, GL_TEXTURE_BORDER_COLOR, v);
 }
 
-void texture__bind(texture_t* self, texture_sampler_t* sampler, uint32_t texture_unit) {
+void texture__bind(texture_t* self, texture_sampler_t* opt_sampler, uint32_t texture_unit) {
     // todo: cache this for the module
     GLint max_texture_units = 0;
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_texture_units);
     ASSERT(texture_unit < (uint32_t) max_texture_units);
 
     glBindTextureUnit(texture_unit, self->id);
-    glBindSampler(texture_unit, sampler->id);
+    if (opt_sampler) {
+        glBindSampler(texture_unit, opt_sampler->id);
+    }
 }
 
 void geometry_object__create(geometry_object_t* self) {
@@ -605,11 +739,11 @@ void geometry_object__draw(geometry_object_t* self, shader_program_pipeline_t* s
 
     for (uint32_t program_index = 0; program_index < shader->programs_top; ++program_index) {
         shader_program_t* shader_program = shader->programs[program_index];
+        glActiveShaderProgram(shader->id, shader_program->id);
         if (shader_program->predraw_callback) {
             shader_program->predraw_callback(shader_program, shader_callback_data);
         }
     }
-
 
     if (self->has_index_buffer) {
         glDrawElementsInstancedBaseVertexBaseInstance(

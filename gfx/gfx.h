@@ -100,7 +100,7 @@ void window__set_windowed_state_content_area(window_t self, int32_t x, int32_t y
  * @brief get position and dimensions of the content area for window's WINDOW_DISPLAY_STATE_WINDOWED state
  * @note the window could be in a different display state
 */
-void window__get_windowed_state_content_area(window_t self, int32_t* x, int32_t* y, uint32_t* width, uint32_t* height);
+void window__get_windowed_state_content_area(window_t self, int32_t* opt_x, int32_t* opt_y, uint32_t* opt_width, uint32_t* opt_height);
 
 /**
  * @brief set position and dimensions of the window area for window's WINDOW_DISPLAY_STATE_WINDOWED state
@@ -172,7 +172,8 @@ enum button {
     BUTTON_N, BUTTON_O, BUTTON_P, BUTTON_Q, BUTTON_R, BUTTON_S, BUTTON_T, BUTTON_U, BUTTON_V, BUTTON_W, BUTTON_X, BUTTON_Y, BUTTON_Z,
 
     BUTTON_LEFT, BUTTON_UP, BUTTON_RIGHT, BUTTON_DOWN,
-    BUTTON_CAPS_LOCK, BUTTON_SHIFT,
+    BUTTON_CAPS_LOCK, BUTTON_LSHIFT, BUTTON_RSHIFT,
+    BUTTON_LCTRL, BUTTON_RCTRL,
     BUTTON_SPACE, BUTTON_BACKSPACE,
     BUTTON_ENTER,
 
@@ -209,6 +210,10 @@ controller_t* window__get_controller(window_t self);
 
 // @brief current state of button
 bool controller__button_is_down(controller_t* self, button_t button);
+
+// @brief For buttons that have multiple values other than pressed/not-pressed
+float controller__button_value(controller_t* self, button_t button);
+
 uint32_t controller__button_n_of_repeats(controller_t* self, button_t button);
 
 // @brief number of press/release transitions

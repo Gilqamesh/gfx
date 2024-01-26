@@ -4,6 +4,7 @@
 #include "helper_macros.h"
 #include "system.h"
 #include "file.h"
+#include "vec_math.h"
 
 #include <stdlib.h>
 
@@ -21,11 +22,17 @@ game_t game__create() {
         return 0;
     }
 
+    result->position._[2] = -3.0f;
+
     // todo: game__update tests to measure the upper-bound for game__update_upper_bound?
 
     debug__write_and_flush(DEBUG_MODULE_GAME, DEBUG_INFO, "loading images...");
 
     if (!game__load_images(result)) {
+        return 0;
+    }
+
+    if (!game__load_shaders(result)) {
         return 0;
     }
 
@@ -70,6 +77,7 @@ void game__frame_start(game_t self) {
 }
 
 void game__customize_window(game_t self, window_t window) {
+    self->window = window;
     window__set_icon(window, self->window_icon_image.data, self->window_icon_image.w, self->window_icon_image.h);
     window__set_cursor(window, self->cursor);
 }
@@ -80,14 +88,22 @@ double game__update_upper_bound(game_t self) {
     return 120.0 / 1000000.0;
 }
 
-void game__update(game_t self, controller_t* controller, double s) {
+void game__update(game_t self, controller_t* window_controller, double s) {
     self->time += s;
 
-    system__usleep(100);
+    // todo: because of fixed time update, this is always the same, so can be cached
+    const float move_speed_per_second = 1.0f;
+    const float move_speed = move_speed_per_second * s;
 
-    (void) self;
-    (void) s;
-    (void) controller;
+
+    if (controller__button_is_down(window_controller, BUTTON_SPACE)) {
+        self->position._[1] += move_speed;
+    }
+    if (controller__button_is_down(window_controller, BUTTON_LCTRL)) {
+        self->position._[1] -= move_speed;
+    }
+
+    system__usleep(100);
 }
 
 void game__render(game_t self, double factor) {
@@ -95,8 +111,8 @@ void game__render(game_t self, double factor) {
         &self->geometry,
         &self->shader,
         vertex_stream_specification(
-            // PRIMITIVE_TYPE_TRIANGLE,
-            PRIMITIVE_TYPE_POINT,
+            PRIMITIVE_TYPE_TRIANGLE,
+            // PRIMITIVE_TYPE_POINT,
             3, 0,
             5, 0
         ),

@@ -54,6 +54,8 @@ enum gl_buffer_type {
     GL_BUFFER_TYPE_VERTEX,
     GL_BUFFER_TYPE_INDEX,
     GL_BUFFER_TYPE_TEXTURE,
+    GL_BUFFER_TYPE_SHADER_STORAGE,
+    GL_BUFFER_TYPE_ATOMIC_COUNTER,
     GL_BUFFER_TYPE_UNIFORM,
     GL_BUFFER_TYPE_TRANSFORM_FEEDBACK,
     GL_BUFFER_TYPE_FRAMEBUFFER,
@@ -129,11 +131,11 @@ struct attached_buffer_depth_stencil {
 };
 
 /**
- * @param data used to initialize the buffer, if NULL, the buffer will be uninitialized
+ * @param opt_data optional data to initialize the buffer
 */
 void gl_buffer__create(
     gl_buffer_t* self,
-    const void* data, uint32_t size,
+    const void* opt_data, uint32_t size,
     gl_buffer_type_t buffer_type, gl_buffer_access_type_t access_type
 );
 void gl_buffer__destroy(gl_buffer_t* self);
@@ -165,7 +167,7 @@ void gl_buffer__copy(
 */
 void gl_buffer__clear(
     gl_buffer_t* self,
-    const void* data, gl_channel_count_t data_channel_count, gl_type_t data_type,
+    const void* data, gl_channel_count_t data_channel_count, gl_type_t data_type, bool is_normalized,
     uint32_t size_to_clear, uint32_t offset_to_clear_from
 );
 
@@ -184,6 +186,11 @@ void* gl_buffer__map(gl_buffer_t* self, uint32_t size, uint32_t offset);
 */
 void gl_buffer__unmap(gl_buffer_t* self);
 
+/**
+ * @note Buffer type must either be one of either: transform feedback, atomic counter, uniform, shader storage
+*/
+void gl_buffer__bind(gl_buffer_t* self, uint32_t binding_point, uint32_t offset, uint32_t size);
+
 void gl_buffer__set_attached_buffer(gl_buffer_t* self, attached_buffer_t* attached_buffer);
 attached_buffer_t* gl_buffer__get_attached_buffer(gl_buffer_t* self, attached_buffer_type_t* attached_buffer_type);
 
@@ -198,12 +205,6 @@ void attached_buffer_depth__clearfv(attached_buffer_depth_t* self, float r, floa
 void attached_buffer_depth_stencil__clearfi(attached_buffer_depth_stencil_t* self, float depth, int32_t stencil);
 
 /********************************************************************************
- * Uniform API
- ********************************************************************************/
-
-
-
-/********************************************************************************
  * Shader API
  ********************************************************************************/
 
@@ -212,12 +213,14 @@ struct         shader_object;
 struct         shader_program;
 struct         shader_program_pipeline;
 struct         shader_program_binary;
+enum           uniform_block_info;
 typedef enum   shader_type             shader_type_t;
 typedef struct shader_object           shader_object_t;
 typedef struct shader_program          shader_program_t;
 typedef struct shader_program_pipeline shader_program_pipeline_t;
 typedef struct shader_program_binary   shader_program_binary_t;
 typedef void   (*shader_program_predraw_callback_t)(shader_program_t*, void* user_data);
+typedef enum   uniform_block_info      uniform_block_info_t;
 
 enum shader_type {
     SHADER_TYPE_VERTEX,
@@ -262,6 +265,13 @@ struct shader_program_binary {
     void*    binary;
 };
 
+enum uniform_block_info {
+    UNIFORM_BLOCK_INFO_ARRAY_SIZE    /* array size, 1 if not an array                                       */,
+    UNIFORM_BLOCK_INFO_OFFSET        /* offset of member within the block                                   */,
+    UNIFORM_BLOCK_INFO_ARRAY_STRIDE  /* number of bytes between the elements of an array, 0 if not an array */,
+    UNIFORM_BLOCK_INFO_MATRIX_STRIDE /* stride between each row of the matrix, 0 if not a matrix            */
+};
+
 //! @brief Creates and compiles a shader object
 bool shader_object__create(shader_object_t* self, shader_type_t type, const char* source);
 void shader_object__destroy(shader_object_t* self);
@@ -287,6 +297,45 @@ bool shader_program__link(shader_program_t* self);
 void shader_program__set_predraw_callback(shader_program_t* self, shader_program_predraw_callback_t predraw_callback);
 
 /**
+ * @note alternatively, set location in shader, ex.: layout (location = 2) uniform mat4 mvp;
+*/
+bool shader_program__get_uniform_location(shader_program_t* self, const char* name, uint32_t* location);
+
+void shader_program__set_uniform_i(shader_program_t* self, uint32_t location, int32_t value);
+void shader_program__set_uniform_iv(shader_program_t* self, uint32_t location, const int32_t* values, uint32_t size);
+void shader_program__set_uniform_f(shader_program_t* self, uint32_t location, float value);
+void shader_program__set_uniform_fv(shader_program_t* self, uint32_t location, const float* values, uint32_t size);
+void shader_program__set_uniform_mat(shader_program_t* self, uint32_t location, const float values[16]);
+
+/**
+ * @note alternatively, set location in shader, ex.: layout (location = 2) uniform MVP { ... } mvp;
+*/
+bool shader_program__get_uniform_block_location(shader_program_t* self, const char* name, uint32_t* location);
+
+/**
+ * @note: uniform buffer binding point allows us to separate shader programs from the buffer objects
+*/
+void shader_program__set_uniform_block_binding(shader_program_t* self, uint32_t location, uint32_t binding);
+
+// Uniform blocks using shared layout (instead of std140)
+
+/**
+ * @example uniform MVP { float a[3]; vec3 b; mat4 c; } mvp;
+ *          names: mvp.a, mvp.b, mvp.c
+ * @param out_locations GL_INVALID_INDEX will be written to those members that were not a name of an active uniform
+*/
+void shader_program__get_uniform_block_member_locations(
+    shader_program_t* self,
+    uint32_t n_of_uniforms, const char** names, uint32_t* out_locations
+);
+
+void shader_program__get_uniform_block_info(
+    shader_program_t* self,
+    uniform_block_info_t info,
+    uint32_t n_of_uniforms, const uint32_t* in_locations, uint32_t* out_infos
+);
+
+/**
  * @brief Get index location for a uniform subroutine from a shader
  * @note Could also just use "layout (index = n)" to enforce an index for a subroutine in the shader
 */
@@ -295,7 +344,7 @@ uint32_t shader_program__get_uniform_subroutine(shader_program_t* self, shader_t
 /**
  * @note Must have the program bound before using this
 */
-void shader_program__set_uniform_subroutine(shader_program_t* self, shader_type_t type, uint32_t index);
+void shader_program__set_uniform_subroutine(shader_program_t* self, shader_type_t type, uint32_t location);
 
 bool shader_program_pipeline__create(shader_program_pipeline_t* self);
 void shader_program_pipeline__destroy(shader_program_pipeline_t* self);
@@ -322,53 +371,16 @@ struct vertex_specification {
 };
 
 enum primitive_type {
-    /**
-     * @brief given a vertex stream of 6 vertices, its interpretation is:
-     * {0}, {1}, {2}, {3}, {4}, {5}, {6}
-    */
-    PRIMITIVE_TYPE_POINT,
+                                  /* Vertex stream interpretation of 6 vertices                        */
+    PRIMITIVE_TYPE_POINT          /* {0}, {1}, {2}, {3}, {4}, {5}, {6}                                 */,
+    PRIMITIVE_TYPE_LINE           /* {0, 1}, {2, 3}, {4, 5}, vertex 6 is ignored                       */,
+    PRIMITIVE_TYPE_LINE_STRIP     /* {0, 1}, {1, 2}, ..., {5, 6}                                       */,
+    PRIMITIVE_TYPE_LINE_LOOP      /* {0, 1}, {1, 2}, ..., {5, 6}, {6, 1}                               */,
+    PRIMITIVE_TYPE_TRIANGLE       /* {0, 1, 2}, {3, 4, 5}                                              */,
+    PRIMITIVE_TYPE_TRIANGLE_STRIP /* {0, 1, 2} (determines face direction), {2, 3, 1}, ..., {5, 6, 4}  */,
+    PRIMITIVE_TYPE_TRIANGLE_FAN   /* {0, 1, 2}, {0, 2, 3}, {0, 3, 4}, ..., {0, 5, 6}                   */,
 
-    /**
-     * @brief given a vertex stream of 6 vertices, its interpretation is:
-     * {0, 1}, {2, 3}, {4, 5}, vertex 6 is ignored
-    */
-    PRIMITIVE_TYPE_LINE,
-
-    /**
-     * @brief given a vertex stream of 6 vertices, its interpretation is:
-     * {0, 1}, {1, 2}, ..., {5, 6}
-    */
-    PRIMITIVE_TYPE_LINE_STRIP,
-
-    /**
-     * @brief given a vertex stream of 6 vertices, its interpretation is:
-     * {0, 1}, {1, 2}, ..., {5, 6}, {6, 1}
-    */
-    PRIMITIVE_TYPE_LINE_LOOP,
-
-    /**
-     * @brief given a vertex stream of 6 vertices, its interpretation is:
-     * {0, 1, 2}, {3, 4, 5}
-    */
-    PRIMITIVE_TYPE_TRIANGLE,        
-
-    /**
-     * @brief given a vertex stream of 6 vertices, its interpretation is:
-     * {0, 1, 2}, {2, 3, 1}, ..., {5, 6, 4}
-     * @note the face direction is determined by the winding of the first triangle
-    */
-    PRIMITIVE_TYPE_TRIANGLE_STRIP,
-
-    /**
-     * @brief given a vertex stream of 6 vertices, its interpretation is:
-     * {0, 1, 2}, {0, 2, 3}, {0, 3, 4}, ..., {0, 5, 6}
-     * @note every triangle is formed with the first index
-    */
-    PRIMITIVE_TYPE_TRIANGLE_FAN,
-
-    /**
-     * @brief use when tessellation shader is active
-    */
+    // @brief use when tessellation shader is active
     PRIMITIVE_TYPE_PATCHES,
 
     _PRIMITIVE_TYPE_SIZE
@@ -414,6 +426,10 @@ typedef enum   wrap_direction      wrap_direction_t;
 
 struct texture {
     uint32_t id;
+    uint32_t dimensions;
+    uint32_t gl_channel_count;
+    uint32_t gl_type;
+    uint32_t gl_internal_format;
 };
 
 enum texture_type {
@@ -424,7 +440,10 @@ enum texture_type {
     TEXTURE_TYPE_2D_ARRAY       /* sampler2DArray            */,
     TEXTURE_TYPE_3D             /* sampler3D                 */,
     TEXTURE_TYPE_CUBE_MAP       /* samplerCube               */,
-    TEXTURE_TYPE_CUBE_MAP_ARRAY /* samplerCubeArray          */
+    TEXTURE_TYPE_CUBE_MAP_ARRAY /* samplerCubeArray          */,
+
+    /* texture buffer must be attached later to source data from */
+    TEXTURE_TYPE_BUFFER         /* samplerBuffer             */
 
     /**
      * ex.: TEXTURE_TYPE_2D texture with sampler bound on texture unit 1
@@ -444,14 +463,19 @@ enum filter_stretch_type {
 
 enum filter_sample_type {
     FILTER_SAMPLE_TYPE_NEAREST,
-    FILTER_SAMPLE_TYPE_LINEAR
+    FILTER_SAMPLE_TYPE_LINEAR,
+    FILTER_SAMPLE_TYPE_NEAREST_MIPMAP_NEAREST,
+    FILTER_SAMPLE_TYPE_NEAREST_MIPMAP_LINEAR,
+    FILTER_SAMPLE_TYPE_LINEAR_MIPMAP_NEAREST,
+    FILTER_SAMPLE_TYPE_LINEAR_MIPMAP_LINEAR
 };
 
 enum wrap_type {
-    WRAP_TYPE_REPEAT,
-    WRAP_TYPE_MIRRORED_REPEAT,
-    WRAP_TYPE_CLAMP_TO_EDGE   /*  */,
-    WRAP_TYPE_CLAMP_TO_BORDER /* taken from a preset border color */
+    WRAP_TYPE_REPEAT          /* texels outside of [0.0, 1.0] are mapped back to [0.0, 1.0] */,
+    WRAP_TYPE_MIRRORED_REPEAT /* texels outside of [0.0, 1.0] are mapped back to [1.0, 0.0] */,
+    WRAP_TYPE_MIRROR_ONCE     /* texels in [-1.0, 0.0) and (1.0, 2.0] are taken like in [0.0, 1.0], outside of these intervals, the texels are taken from the edges of the texture */,
+    WRAP_TYPE_CLAMP_TO_EDGE   /* texels outside of [0.0, 1.0] are taken from the edges of the texture */,
+    WRAP_TYPE_CLAMP_TO_BORDER /* taken from a preset border color */,
 };
 
 enum wrap_direction {
@@ -460,20 +484,38 @@ enum wrap_direction {
     WRAP_DIRECTION_DEPTH  = 1 << 2 /* affects only 3D textures */,
 };
 
+/**
+ * @param opt_data use texture__write to source the texture
+*/
 bool texture__create(
     texture_t* self,
-    texture_type_t texture_type, gl_type_t format_type, gl_channel_count_t format_channel_count, uint32_t mipmap_levels,
-    void* data, uint32_t width, uint32_t height, uint32_t depth
+    texture_type_t texture_type, gl_type_t format_type, gl_channel_count_t format_channel_count, bool is_normalized, uint32_t mipmap_levels,
+    const void* opt_data, uint32_t width, uint32_t height, uint32_t depth
+);
+void texture__destroy(texture_t* self);
+
+void texture__write(
+    texture_t* self,
+    uint32_t x_offset, uint32_t y_offset, uint32_t z_offset,
+    const void* data, uint32_t width, uint32_t height, uint32_t depth
 );
 
+/**
+ * @brief Attach an offset aligned texture buffer
+ * @note The texture buffer's format should match the texture's format
+ * @note In the shader, texels can only be accessed with texelFetch, as texture buffers are unfiltered
+*/
+void texture__attach_buffer(texture_t* self, gl_buffer_t* buffer, uint32_t buffer_offset, uint32_t buffer_size);
+
 bool texture_sampler__create(texture_sampler_t* self);
+void texture_sampler__destroy(texture_sampler_t* self);
 void texture_sampler__set_filtering(texture_sampler_t* self, filter_stretch_type_t stretch_type, filter_sample_type_t sample_type);
 void texture_sampler__set_wrapping(texture_sampler_t* self, wrap_direction_t bitwise_direction, wrap_type_t wrap_type);
 
 //! @brief Set color for when WRAP_TYPE_CLAMP_TO_BORDER is enabled for wrapping
 void texture_sampler__set_wrapping_border_color(texture_sampler_t* self, float red, float green, float blue, float alpha);
 
-void texture__bind(texture_t* self, texture_sampler_t* sampler, uint32_t texture_unit);
+void texture__bind(texture_t* self, texture_sampler_t* opt_sampler, uint32_t texture_unit);
 
 /********************************************************************************
  * Geometry API

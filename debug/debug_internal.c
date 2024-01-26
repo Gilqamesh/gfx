@@ -61,18 +61,32 @@ static void debug__vwriteln(const char* format, va_list ap) {
 }
 
 static void debug__flush_helper(FILE* fp, debug_module_t module, debug_message_type_t message_type) {
+    if (str_builder__len(&debug.str_builder) == 0) {
+        return ;
+    }
+    
     time_t cur_time = time(NULL);
     struct tm* cur_localtime = localtime(&cur_time);
+
+    const char* color_codes[] = {
+        "\e[31;1m" /* red     bold */,
+        "\e[33;1m" /* yellow  bold */,
+        "\e[34;1m" /* blue    bold*/,
+        "\e[35;1m" /* magenta bold*/
+    };
+    const char* color_reset = "\e[0m";
+
     fprintf(
         fp,
-        "[%02d:%02d:%02d] [%s] - %s: ",
+        "%s[%02d:%02d:%02d] [%s] - %s: ",
+        color_codes[message_type],
         cur_localtime->tm_hour, cur_localtime->tm_min, cur_localtime->tm_sec, debug_module__to_str(module), debug_message_type__to_str(message_type)
     );
     if (debug.number_of_lines > 1) {
         fprintf(fp, "\n");
     }
 
-    fprintf(fp, "%s", str_builder__str(&debug.str_builder));
+    fprintf(fp, "%s%s", str_builder__str(&debug.str_builder), color_reset);
     fflush(fp);
 }
 
