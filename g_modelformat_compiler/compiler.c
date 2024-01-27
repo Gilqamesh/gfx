@@ -1,7 +1,6 @@
 #include "compiler.h"
 
 #include "file.h"
-#include "vec_math.h"
 #include "helper_macros.h"
 #include "scan.h"
 

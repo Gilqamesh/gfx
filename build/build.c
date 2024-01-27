@@ -30,10 +30,11 @@ void compiler__destroy(compiler_t self) {
     free(self);
 }
 
-module_t module__create(const char* dir) {
+module_t module__create(const char* dir, compiler_t compiler) {
     module_t result = calloc(1, sizeof(*result));
 
     result->dir = dir;
+    result->compiler = compiler;
     ARRAY_ENSURE_TOP(result->lflags, result->lflags_top, result->lflags_size);
     result->lflags[result->lflags_top++] = 0;
 
@@ -131,7 +132,7 @@ int32_t module__is_dependency(module_t self, module_t dependency) {
     return 0;
 }
 
-void module__compile(module_t self, compiler_t compiler) {
+void module__compile(module_t self) {
     if (self->is_compiled != 0) {
         // either compiling or compiled
         return ;
@@ -145,7 +146,7 @@ void module__compile(module_t self, compiler_t compiler) {
             continue ;
         }
 
-        module_file__prepend_cflag(module_file, compiler->path);
+        module_file__prepend_cflag(module_file, self->compiler->path);
         module_file__append_dependency_includes(module_file, self);
         for (uint32_t cflag_index = 0; cflag_index < module_file->cflags_top - 1; ++cflag_index) {
             printf("%s ", module_file->cflags[cflag_index]);
@@ -157,7 +158,7 @@ void module__compile(module_t self, compiler_t compiler) {
             exit(EXIT_FAILURE);
         }
         if (pid == 0) {
-            execve(compiler->path, (char* const*) module_file->cflags, environ);
+            execve(self->compiler->path, (char* const*) module_file->cflags, environ);
             perror(0);
             exit(EXIT_FAILURE);
         }
@@ -202,7 +203,7 @@ int32_t module__link(module_t self, compiler_t compiler) {
     }
     self->is_linked = -1;
 
-    module_t fake_module = module__create(self->dir);
+    module_t fake_module = module__create(self->dir, compiler);
     module__append_lflag(fake_module, "%s", compiler->path);
     module__append_lflag(fake_module, "-o");
     // module__append_lflag(fake_module, "%s.out", self->dir);

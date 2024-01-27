@@ -3,6 +3,12 @@
 
 # define ARRAY_SIZE(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
+# if defined(__cplusplus)
+#  define PUBLIC_API extern "C"
+# else
+#  define PUBLIC_API
+# endif
+
 # if defined (_WIN32) || defined (__CYGWIN__)
 #  define WINDOWS
 # elif defined(__linux__)

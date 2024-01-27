@@ -49,8 +49,11 @@ void main() {
     float xoffset = -0.5f;
     float xstretch = 0.3f;
     vec4 p = vec4(
-        pos.x + xoffset + gl_InstanceID * xstretch, pos.y,
-        0.0, 1.0
+        pos.x + xoffset + gl_InstanceID * xstretch,
+        //pos.x,
+        pos.y,
+        0.0,
+        1.0
     );
 
     gl_Position = vs_common.mvp * p;

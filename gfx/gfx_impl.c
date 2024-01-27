@@ -10,7 +10,6 @@ struct button_state {
     uint32_t n_of_repeats;
     void     (*action_on_button_down)(void*);
     void*    user_pointer;
-    // bool     ended_down;
     float    ended_down_value;
 
     /**

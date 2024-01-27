@@ -19,7 +19,8 @@ const char* options[] = {
 };
 
 int main(int argc, char* argv[]) {
-    compiler = compiler__create("/usr/bin/gcc");
+    c_compiler = compiler__create("/usr/bin/gcc");
+    cpp_compiler = compiler__create("/usr/bin/g++");
 
     if (argc < 2) {
         fprintf(stderr, "usage: build_driver_bin <module_name> [options]\n");
@@ -59,17 +60,18 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    supported_module->module = module__create(module_dir);
+    supported_module->module = module__create(module_dir, c_compiler);
     supported_module->is_link_option = is_link_option;
     supported_module__init_and_compile_wrapper(supported_module);
 
     module__wait_for_compilation(supported_module->module);
 
     if (is_link_option) {
-        module__link(supported_module->module, compiler);
+        module__link(supported_module->module, c_compiler);
     }
 
-    compiler__destroy(compiler);
+    compiler__destroy(c_compiler);
+    compiler__destroy(cpp_compiler);
 
     return 0;
 }

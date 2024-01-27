@@ -23,7 +23,7 @@ struct         module_file;
 typedef struct module*      module_t;
 typedef struct module_file* module_file_t;
 
-module_t module__create(const char* dir);
+module_t module__create(const char* dir, compiler_t compiler);
 void module__destroy(module_t self);
 const char* module__dir(module_t self);
 module_file_t module__add_file(module_t self, const char* src);
@@ -33,7 +33,7 @@ void module__prepend_lflag(module_t self, const char* lflag_format, ...);
 void module__append_lflag(module_t self, const char* lflag_format, ...);
 void module__add_dependency(module_t self, module_t dependency);
 int32_t module__is_dependency(module_t self, module_t dependency);
-void module__compile(module_t self, compiler_t compiler);
+void module__compile(module_t self);
 /**
  * 0  - hasn't been compiled yet
  * >0 - compiled

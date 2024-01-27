@@ -7,6 +7,7 @@
 # include <stdint.h>
 
 # include "thread.h"
+# include "helper_macros.h"
 
 // todo: turn some of the message types that are resource-intensitve into compile-time api
 
@@ -16,24 +17,19 @@
     } \
 } while (false)
 
-bool debug__init_module();
-void debug__deinit_module();
+PUBLIC_API bool debug__init_module();
+PUBLIC_API void debug__deinit_module();
 
-enum         debug_message_type;
-enum         debug_module;
-typedef enum debug_message_type debug_message_type_t;
-typedef enum debug_module       debug_module_t;
-
-enum debug_message_type {
+typedef enum debug_message_type {
     DEBUG_ERROR,
     DEBUG_WARN,
     DEBUG_INFO,
     DEBUG_NET,
 
     _DEBUG_MESSAGE_TYPE_SIZE
-};
+} debug_message_type_t;
 
-enum debug_module {
+typedef enum debug_module {
     DEBUG_MODULE_APP,
     DEBUG_MODULE_GLFW,
     DEBUG_MODULE_GL,
@@ -43,31 +39,31 @@ enum debug_module {
     DEBUG_MODULE_GAME_CLIENT,
 
     _DEBUG_MODULE_SIZE
-};
+} debug_module_t;
 
 /**
  * @brief Call before non-atomic operations
 */
-void debug__lock();
-void debug__unlock();
+PUBLIC_API void debug__lock();
+PUBLIC_API void debug__unlock();
 
 //! @note Non-atomic
-void debug__write_raw(const char* format, ...);
+PUBLIC_API void debug__write_raw(const char* format, ...);
 //! @note Non-atomic
-void debug__writeln(const char* format, ...);
+PUBLIC_API void debug__writeln(const char* format, ...);
 //! @note Atomic
-void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...);
+PUBLIC_API void debug__write_and_flush(debug_module_t module, debug_message_type_t message_type, const char* format, ...);
 //! @note Non-atomic
-void debug__flush(debug_module_t module, debug_message_type_t message_type);
+PUBLIC_API void debug__flush(debug_module_t module, debug_message_type_t message_type);
 
 //! @note Atomic
-void debug__set_message_type_availability(debug_message_type_t message_type, bool value);
+PUBLIC_API void debug__set_message_type_availability(debug_message_type_t message_type, bool value);
 //! @note Atomic
-bool debug__get_message_type_availability(debug_message_type_t message_type);
+PUBLIC_API bool debug__get_message_type_availability(debug_message_type_t message_type);
 
 //! @note Atomic
-void debug__set_message_module_availability(debug_module_t module, bool value);
+PUBLIC_API void debug__set_message_module_availability(debug_module_t module, bool value);
 //! @note Atomic
-bool debug__get_message_module_availability(debug_module_t module);
+PUBLIC_API bool debug__get_message_module_availability(debug_module_t module);
 
 #endif // DEBUG_H

@@ -605,15 +605,15 @@ void texture_sampler__set_filtering(texture_sampler_t* self, filter_stretch_type
     glSamplerParameteri(self->id, texture_filter_stretch_type__to_gl(stretch_type), texture_filter_sample_type__to_gl(sample_type));
 }
 
-void texture_sampler__set_wrapping(texture_sampler_t* self, wrap_direction_t bitwise_direction, wrap_type_t wrap_type) {
+void texture_sampler__set_wrapping(texture_sampler_t* self, uint32_t bitwise_wrap_direction, wrap_type_t wrap_type) {
     const uint32_t gl_wrap_type = texture_wrap_type__to_gl(wrap_type);
-    if (bitwise_direction & WRAP_DIRECTION_WIDTH) {
+    if (bitwise_wrap_direction & WRAP_DIRECTION_WIDTH) {
         glSamplerParameteri(self->id, GL_TEXTURE_WRAP_S, gl_wrap_type);
     }
-    if (bitwise_direction & WRAP_DIRECTION_HEIGHT) {
+    if (bitwise_wrap_direction & WRAP_DIRECTION_HEIGHT) {
         glSamplerParameteri(self->id, GL_TEXTURE_WRAP_T, gl_wrap_type);
     }
-    if (bitwise_direction & WRAP_DIRECTION_DEPTH) {
+    if (bitwise_wrap_direction & WRAP_DIRECTION_DEPTH) {
         glSamplerParameteri(self->id, GL_TEXTURE_WRAP_R, gl_wrap_type);
     }
 }
@@ -733,7 +733,12 @@ void geometry_object__detach_index_buffer(geometry_object_t* self) {
     glVertexArrayElementBuffer(self->id, 0);
 }
 
-void geometry_object__draw(geometry_object_t* self, shader_program_pipeline_t* shader, vertex_stream_specification_t vertex_stream_specification, void* shader_callback_data) {
+void geometry_object__draw(
+    geometry_object_t* self,
+    shader_program_pipeline_t* shader,
+    vertex_stream_specification_t vertex_stream_specification,
+    void* shader_callback_data
+) {
     geometry_object__bind(self);
     shader_program_pipeline__bind(shader);
 

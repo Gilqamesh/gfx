@@ -41,7 +41,8 @@ static void supported_module__init_game_module(supported_module_t* self);
 static void supported_module__init_gfx_module(supported_module_t* self);
 static void supported_module__init_g_modelformat_compiler_module(supported_module_t* self);
 
-static compiler_t compiler;
+static compiler_t c_compiler;
+static compiler_t cpp_compiler;
 
 static supported_module_t supported_modules[_SUPPORTED_MODULE_NAME_SIZE] = {
     {
@@ -82,7 +83,8 @@ static supported_module_t* supported_modules__ensure_module(supported_module_nam
     assert(supported_module_name < _SUPPORTED_MODULE_NAME_SIZE);
     supported_module_t* supported_module = &supported_modules[supported_module_name];
     if (!supported_module->module) {
-        supported_module->module = module__create(supported_module->dir);
+        compiler_t compiler = supported_module_name == GAME_MODULE ? cpp_compiler : c_compiler;
+        supported_module->module = module__create(supported_module->dir, compiler);
     }
     assert(supported_module->module);
 
@@ -219,13 +221,13 @@ static void supported_module__init_transport_protocol_module(supported_module_t*
 }
 
 static void supported_module__init_game_module(supported_module_t* self) {
-    module_file_t game_file = module__add_file(self->module, "game.c");
+    module_file_t game_file = module__add_file(self->module, "game.cpp");
 
     module_file__add_common_cflags(game_file);
     module_file__add_debug_cflags(game_file);
 
     module__append_lflag(self->module, "-lm");
-
+    
     module__add_supported_dependency(self->module, DEBUG_MODULE);
     module__add_supported_dependency(self->module, COMMON_MODULE);
     module__add_supported_dependency(self->module, GFX_MODULE);
@@ -288,7 +290,7 @@ static void supported_module__init_and_compile_wrapper(supported_module_t* self)
 
     self->supported_module__init_and_compile(self);
 
-    module__compile(self->module, compiler);
+    module__compile(self->module);
 }
 
 static void module__add_supported_dependency(module_t self, supported_module_name_t supported_dependency_name) {

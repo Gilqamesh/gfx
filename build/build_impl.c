@@ -28,6 +28,8 @@ struct lflag {
 struct module {
     const char* dir;
 
+    compiler_t compiler;
+
     uint32_t       files_top;
     uint32_t       files_size;
     module_file_t* files;
@@ -148,9 +150,9 @@ static module_file_t module_file__create(const char* dir, const char* src) {
     result->cflags[result->cflags_top++] = 0;
 
     module_file__append_cflag(result, "-o");
-    uint32_t src_len = strlen(src);
-    assert(src_len > 2);
-    module_file__append_cflag(result, "%s/%.*s.o", dir, src_len - 2, src);
+    char* src_extension = strrchr(src, '.');
+    assert(src_extension);
+    module_file__append_cflag(result, "%s/%.*s.o", dir, src_extension - src, src);
     module_file__append_cflag(result, "-c");
     module_file__append_cflag(result, "%s/%s", dir, src);
 
@@ -281,9 +283,9 @@ static void module__collect_file_lflags(module_t self, module_t append_to, int32
 
         for (uint32_t file_index = 0; file_index < self->files_top; ++file_index) {
             module_file_t file = self->files[file_index];
-            uint32_t src_len = strlen(file->src);
-            assert(src_len > 2);
-            module__append_lflag(append_to, "%s/%.*s.o", self->dir, src_len - 2, file->src);
+            char* src_extension = strrchr(file->src, '.');
+            assert(src_extension);
+            module__append_lflag(append_to, "%s/%.*s.o", self->dir, src_extension - file->src, file->src);
         }
     } else {
         if (self->transient_flag == 0) {

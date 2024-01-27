@@ -81,6 +81,8 @@ game_client_t game_client__create(game_client_config_t config, uint16_t client_p
     result->window = window;
 
     game_client__push_stage(result, &loop_stage__collect_previous_frame_info);
+    // todo: hot reload stage
+    // game_client__push_stage(result, &loop_stage__reload_game_dll);
     game_client__push_stage(result, &loop_stage__poll_inputs);
     game_client__push_stage(result, &loop_stage__update_loop);
     game_client__push_stage(result, &loop_stage__render);

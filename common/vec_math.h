@@ -14,7 +14,7 @@ struct         quat;
 typedef struct vec2   vec2_t;
 typedef struct vec3   vec3_t;
 typedef struct vec4   vec4_t;
-typedef struct mat4   mat4_t; // column major 4x4 matrix
+typedef struct mat4   mat4_t;
 typedef struct quat   quat_t;
 
 struct vec2   { float _[2]; };
@@ -120,7 +120,7 @@ static inline float  vec3__len_self(vec3_t* self) { return sqrt(self->_[0] * sel
 static inline float  vec3__len(vec3_t a) { return vec3__len_self(&a); }
 static inline float  vec3__dist(vec3_t a, vec3_t b) { return vec3__len(vec3__sub(b, a)); }
 static inline float  vec3__angl(vec3_t a, vec3_t b) { const float denom = vec3__len(a) * vec3__len(b); assert(denom != 0.0f); return acos(vec3__inner(a, b) / denom); }
-static inline void   vec3__norm_self(vec3_t* self) { vec3__div_self(self, vec3__len_self(self)); }
+static inline void   vec3__norm_self(vec3_t* self) { float len = vec3__len_self(self); if (len == 0.0f) return ; vec3__div_self(self, len); }
 static inline vec3_t vec3__norm(vec3_t a) { vec3__norm_self(&a); return a; }
 static inline vec3_t vec3__clamp(vec3_t a, vec3_t min, vec3_t max) {
     a._[0] = a._[0] < min._[0] ? min._[0] : a._[0];
@@ -286,38 +286,57 @@ static inline mat4_t mat4__rot(vec3_t axis, float angle) {
     return result;
 }
 static inline void   mat4__scale(mat4_t* self, vec3_t b) { self->_[0] *= b._[0]; self->_[5] *= b._[1]; self->_[10] *= b._[2]; }
+// static inline vec3_t mat4__look_at_vec() {
+// }
 static inline mat4_t mat4__look_at(vec3_t eye, vec3_t point_of_interest, vec3_t world_up) {
     mat4_t result = mat4__null();
     vec3_t forward = vec3__sub(point_of_interest, eye);
     vec3__norm_self(&forward);
-    const vec3_t side = vec3__norm(vec3__outer(forward, world_up));
-    world_up = vec3__outer(side, forward);
-    result._[0]  = side._[0];
-    result._[1]  = world_up._[0];
-    result._[2]  = forward._[0];
-    result._[3]  = -eye._[0];
-    result._[4]  = side._[1];
-    result._[5]  = world_up._[1];
-    result._[6]  = forward._[1];
-    result._[7]  = -eye._[1];
-    result._[8]  = side._[2];
-    result._[9]  = world_up._[2];
-    result._[10] = forward._[2];
-    result._[11] = -eye._[2];
-    result._[15] = 1.0f;
+    const vec3_t side = vec3__norm(vec3__outer(world_up, forward));
+    world_up = vec3__outer(forward, side);
+    // result._[0]  = side._[0];
+    // result._[1]  = world_up._[0];
+    // result._[2]  = forward._[0];
+    // // result._[3]  = -eye._[0];
+    // result._[3]  = -vec3__inner(side, eye);
+    // result._[4]  = side._[1];
+    // result._[5]  = world_up._[1];
+    // result._[6]  = forward._[1];
+    // // result._[7]  = -eye._[1];
+    // result._[7]  = -vec3__inner(world_up, eye);
+    // result._[8]  = side._[2];
+    // result._[9]  = world_up._[2];
+    // result._[10] = forward._[2];
+    // // result._[11] = -eye._[2];
+    // result._[11] = -vec3__inner(forward, eye);
+
     // result._[0]  = side._[0];
     // result._[1]  = side._[1];
     // result._[2]  = side._[2];
+    // result._[3]  = -side._[0] * eye._[0] - side._[1] * eye._[1] - side._[2] * eye._[2];
     // result._[4]  = world_up._[0];
     // result._[5]  = world_up._[1];
     // result._[6]  = world_up._[2];
+    // result._[7]  = -world_up._[0] * eye._[0] - world_up._[1] * eye._[1] - world_up._[2] * eye._[2];
     // result._[8]  = forward._[0];
     // result._[9]  = forward._[1];
     // result._[10] = forward._[2];
-    // result._[12] = -eye._[0];
-    // result._[13] = -eye._[1];
-    // result._[14] = -eye._[2];
-    // result._[15] = 1.0f;
+    // result._[11] = -forward._[0] * eye._[0] - forward._[1] * eye._[1] - forward._[2] * eye._[2];
+
+    result._[0]  = side._[0];
+    result._[1]  = world_up._[0];
+    result._[2]  = forward._[0];
+    result._[3]  = -side._[0] * eye._[0] - side._[1] * eye._[1] - side._[2] * eye._[2];
+    result._[4]  = side._[1];
+    result._[5]  = world_up._[1];
+    result._[6]  = forward._[1];
+    result._[7]  = -world_up._[0] * eye._[0] - world_up._[1] * eye._[1] - world_up._[2] * eye._[2];
+    result._[8]  = side._[2];
+    result._[9]  = world_up._[2];
+    result._[10] = forward._[2];
+    result._[11] = -forward._[0] * eye._[0] - forward._[1] * eye._[1] - forward._[2] * eye._[2];
+
+    result._[15] = 1.0f;
     return result;
 }
 //! @brief Perspective projection matrix defined by a frustum
@@ -328,28 +347,45 @@ static inline mat4_t mat4__perspective_frustum(float left, float right, float bo
     result._[2]  = (right + left) / (right - left);
     result._[5]  = 2.0f * near / (top - bottom);
     result._[6]  = (top + bottom) / (top - bottom);
-    result._[10] = (near + far) / (near - far);
-    result._[11] = 2.0f * near * far / (near - far);
+    result._[10] = (far + near) / (near - far);
+    result._[11] = 2.0f * far * near / (near - far);
     result._[14] = -1.0f;
+
     // result._[0]  = 2.0f * near / (right - left);
     // result._[5]  = 2.0f * near / (top - bottom);
     // result._[8]  = (right + left) / (right - left);
     // result._[9]  = (top + bottom) / (top - bottom);
-    // result._[10] = (near + far) / (near - far);
+    // result._[10] = (far + near) / (near - far);
     // result._[11] = -1.0f;
-    // result._[14] = 2.0f * near * far / (near - far);
+    // result._[14] = 2.0f * far * near / (near - far);
+
     return result;
 }
 //! @brief Perspective projection matrix defined by an aspect ratio and fov
-static inline mat4_t mat4__perspective_aspect(float fov_rad, float aspect, float near, float far) {
+static inline mat4_t mat4__perspective_aspect(float fov_rad, unsigned int width, unsigned int height, float near, float far) {
+    (void) fov_rad;
     assert(far > near);
-    const float tan_half_of_fov = tan(fov_rad / 2.0f);
+    assert(fov_rad < M_PI);
+    const float dist_from_camera = 1.0f / tan(fov_rad / 2.0f);
+    // const float inverse_dist_from_camera = 1.0f / near;
     mat4_t result = mat4__null();
-    result._[0]  = 1.0f / (aspect * tan_half_of_fov);
-    result._[5]  = 1.0f / tan_half_of_fov;
-    result._[10] = -((far + near) / (far - near));
-    result._[11] = -1.0f;
-    result._[14] = -((2.0f * far * near) / (far - near));
+    // result._[0]  = 1.0f / (aspect * inverse_dist_from_camera);
+    // result._[5]  = 1.0f / inverse_dist_from_camera;
+    // result._[10] = -((far + near) / (far - near));
+    // result._[11] = -1.0f;
+    // result._[14] = -((2.0f * far * near) / (far - near));
+
+    // result._[0]  = 1.0f / (aspect * inverse_dist_from_camera);
+    // result._[5]  = 1.0f / inverse_dist_from_camera;
+    // result._[10] = -((far + near) / (far - near));
+    // result._[11] = -1.0f;
+    // result._[14] = -((2.0f * far * near) / (far - near));
+
+    result._[0]  = dist_from_camera * (float) height / (float) width;
+    result._[5]  = dist_from_camera;
+    result._[10] = (far + near) / (far - near);
+    result._[11] = 1.0f;
+    result._[14] = 2.0f * far * near / (near - far);
     return result;
 }
 //! @brief Orthographic projection defined by a frustum

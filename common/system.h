@@ -3,12 +3,14 @@
 
 # include <stdint.h>
 
-void system__init();
+# include "helper_macros.h"
 
-void system__sleep(double s);
-void system__usleep(double us);
+PUBLIC_API void system__init();
+
+PUBLIC_API void system__sleep(double s);
+PUBLIC_API void system__usleep(double us);
 
 // @returns returns time in seconds since system__init was called
-double system__get_time();
+PUBLIC_API double system__get_time();
 
 #endif // SYSTEM_H

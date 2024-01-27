@@ -9,9 +9,9 @@
             // "program": "${workspaceFolder}/modules/io/file/test/file.exe",
             // "program": "${workspaceFolder}/modules/io/file/file_reader/test/file_reader.exe",
             // "program": "${workspaceFolder}/vm_stuff/a.out",
-            "program": "${workspaceFolder}/a.out",
+            // "program": "${workspaceFolder}/a.out",
             // "program": "${workspaceFolder}/sb7code/bin/deferredshading",
-            // "program": "${workspaceFolder}/b.out",
+            "program": "${workspaceFolder}/b.out",
             // "program": "${workspaceFolder}/modules/data_structures/circular_buffer/test/circular_buffer.exe",
             // "program": "${workspaceFolder}/modules/test/modules.exe",
             // "program": "${workspaceFolder}/transpiler/transpiler.exe",
@@ -38,9 +38,11 @@
                 // "modelformat",
                 // "-c"
 
-                "idk2",
-                "idk",
-                "-d"
+                // "idk2",
+                // "idk",
+                // "-d"
+
+                "game_client"
 
                 // "-h"
                 // "-fmax-errors="
