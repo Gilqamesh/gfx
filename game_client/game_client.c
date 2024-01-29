@@ -45,7 +45,7 @@ game_client_t game_client__create(game_client_config_t config, uint16_t client_p
     }
 
     uint32_t monitors_size = 0;
-    monitor_t* monitors = monitor__get_monitors(&monitors_size);
+    monitor_t* monitors = gfx__get_monitors(&monitors_size);
     ASSERT(monitors_size > 0);
     window_t window = window__create(monitors[0], "Main Window", 800, 600);
     if (!window) {
@@ -56,8 +56,6 @@ game_client_t game_client__create(game_client_config_t config, uint16_t client_p
     if (!game_state) {
         return 0;
     }
-
-    game__customize_window(game_state, window);
 
     game_client_t result = calloc(1, sizeof(*result));
     if (!result) {
@@ -104,7 +102,7 @@ void game_client__destroy(game_client_t self) {
 void game_client__run(game_client_t self, double target_fps) {
     debug__write_and_flush(DEBUG_MODULE_GAME_CLIENT, DEBUG_INFO, "target fps: %lf", target_fps);
 
-    debug__set_message_type_availability(DEBUG_NET, false);
+    debug__set_message_type_availability(_DEBUG_MODULE_SIZE, DEBUG_NET, false);
 
     self->time_frame_expected    = 1.0 / target_fps;
     self->time_game_update_fixed = game__update_upper_bound(self->game_state);

@@ -15,12 +15,12 @@ bool debug__init_module() {
 
     str_builder__create(&debug.str_builder);
 
-    for (uint32_t error_level_availability_index = 0; error_level_availability_index < _DEBUG_MESSAGE_TYPE_SIZE; ++error_level_availability_index) {
-        debug.error_level_availability[error_level_availability_index] = true;
-    }
-
-    for (uint32_t error_module_availability_index = 0; error_module_availability_index < _DEBUG_MODULE_SIZE; ++error_module_availability_index) {
-        debug.error_module_availability[error_module_availability_index] = true;
+    for (uint32_t module_index = 0; module_index < ARRAY_SIZE(debug.modules); ++module_index) {
+        module_t* module = &debug.modules[module_index];
+        module->available = true;
+        for (uint32_t level_available_index = 0; level_available_index < ARRAY_SIZE(module->level_available); ++level_available_index) {
+            module->level_available[level_available_index] = true;
+        }
     }
 
     debug.error_file = fopen("debug/debug.txt", "w");
@@ -80,7 +80,7 @@ void debug__write_and_flush(debug_module_t module, debug_message_type_t message_
 
     if (
         !debug__get_message_module_availability(module) ||
-        !debug__get_message_type_availability(message_type)
+        !debug__get_message_type_availability(module, message_type)
     ) {
         debug__clear();
         debug__unlock();
@@ -102,7 +102,7 @@ void debug__write_and_flush(debug_module_t module, debug_message_type_t message_
 void debug__flush(debug_module_t module, debug_message_type_t message_type) {
     if (
         !debug__get_message_module_availability(module) ||
-        !debug__get_message_type_availability(message_type)
+        !debug__get_message_type_availability(module, message_type)
     ) {
         debug__clear();
         return ;
@@ -116,22 +116,30 @@ void debug__flush(debug_module_t module, debug_message_type_t message_type) {
     debug__clear();
 }
 
-void debug__set_message_type_availability(debug_message_type_t message_type, bool value) {
+void debug__set_message_type_availability(debug_module_t module, debug_message_type_t message_type, bool value) {
+    ASSERT(module <= _DEBUG_MODULE_SIZE);
     ASSERT(message_type < _DEBUG_MESSAGE_TYPE_SIZE);
-    debug.error_level_availability[message_type] = value;
+    if (module == _DEBUG_MODULE_SIZE) {
+        for (uint32_t module_index = 0; module_index < ARRAY_SIZE(debug.modules); ++module_index) {
+            debug.modules[module_index].level_available[message_type] = value;
+        }
+    } else {
+        debug.modules[module].level_available[message_type] = value;
+    }
 }
 
-bool debug__get_message_type_availability(debug_message_type_t message_type) {
+bool debug__get_message_type_availability(debug_module_t module, debug_message_type_t message_type) {
+    ASSERT(module < _DEBUG_MODULE_SIZE);
     ASSERT(message_type < _DEBUG_MESSAGE_TYPE_SIZE);
-    return debug.error_level_availability[message_type];
+    return debug.modules[module].level_available[message_type];
 }
 
 void debug__set_message_module_availability(debug_module_t module, bool value) {
     ASSERT(module < _DEBUG_MODULE_SIZE);
-    debug.error_module_availability[module] = value;
+    debug.modules[module].available = value;
 }
 
 bool debug__get_message_module_availability(debug_module_t module) {
     ASSERT(module < _DEBUG_MODULE_SIZE);
-    return debug.error_module_availability[module];
+    return debug.modules[module].available;
 }

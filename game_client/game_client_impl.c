@@ -182,7 +182,7 @@ static bool loop_stage__update_loop(loop_stage_t* self, game_client_t game_clien
     game_client->previous_frame_info.number_of_updates = game_client->time_update_to_process / game_client->time_game_update_fixed;
     game_client->time_update_to_process -= game_client->previous_frame_info.number_of_updates * game_client->time_game_update_fixed;
     for (uint32_t game_updates_count = 0; game_updates_count < game_client->previous_frame_info.number_of_updates; ++game_updates_count) {
-        game__update(game_client->game_state, window__get_controller(game_client->window), game_client->time_game_update_fixed);
+        game__update(game_client->game_state, game_client->time_game_update_fixed);
     }
     double time_end = system__get_time();
     game_client->previous_frame_info.time_update_actual = (time_end - self->time_start) / game_client->previous_frame_info.number_of_updates;

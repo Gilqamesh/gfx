@@ -10,16 +10,12 @@ typedef struct game* game_t;
 
 /**
  * @brief Creates and initializes the game state
+ * @brief Set window options for the game, ex. cursor, icon, size, position
 */
-PUBLIC_API game_t game__create();
+PUBLIC_API game_t game__create(window_t window);
 PUBLIC_API void game__destroy(game_t self);
 
 PUBLIC_API void game__frame_start(game_t self);
-
-/**
- * @brief Set window options for the game, ex. cursor, icon, size, position
-*/
-PUBLIC_API void game__customize_window(game_t self, window_t window);
 
 /**
  * @returns The real time (in seconds) it takes at most to do one game__update
@@ -32,7 +28,7 @@ PUBLIC_API double game__update_upper_bound(game_t self);
 /**
  * @note Should be fairly deterministic in terms of how much a call takes to work best with the fixed time step
 */
-PUBLIC_API void game__update(game_t self, controller_t* window_controller, double s);
+PUBLIC_API void game__update(game_t self, double s);
 
 /**
  * @param render_interpolation_factor [0, 1] value that can be used for interpolation during rendering, it is a result of the fixed time step update

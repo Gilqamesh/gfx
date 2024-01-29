@@ -31,7 +31,7 @@ typedef enum debug_message_type {
 
 typedef enum debug_module {
     DEBUG_MODULE_APP,
-    DEBUG_MODULE_GLFW,
+    DEBUG_MODULE_GFX,
     DEBUG_MODULE_GL,
     DEBUG_MODULE_VULKAN,
     DEBUG_MODULE_GAME,
@@ -57,9 +57,10 @@ PUBLIC_API void debug__write_and_flush(debug_module_t module, debug_message_type
 PUBLIC_API void debug__flush(debug_module_t module, debug_message_type_t message_type);
 
 //! @note Atomic
-PUBLIC_API void debug__set_message_type_availability(debug_message_type_t message_type, bool value);
+//! @param module to disable for all modules, set this to _DEBUG_MODULE_SIZE
+PUBLIC_API void debug__set_message_type_availability(debug_module_t module, debug_message_type_t message_type, bool value);
 //! @note Atomic
-PUBLIC_API bool debug__get_message_type_availability(debug_message_type_t message_type);
+PUBLIC_API bool debug__get_message_type_availability(debug_module_t module, debug_message_type_t message_type);
 
 //! @note Atomic
 PUBLIC_API void debug__set_message_module_availability(debug_module_t module, bool value);

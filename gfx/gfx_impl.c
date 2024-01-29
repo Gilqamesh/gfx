@@ -3,7 +3,7 @@ struct         gfx;
 typedef struct button_state button_state_t;
 typedef struct gfx          gfx_t;
 
-#define BUTTON_ENDED_DOWN_MINIMUM_VALUE_FOR_PRESSED 0.25f
+#define BUTTON_ENDED_DOWN_MINIMUM_VALUE_FOR_PRESSED 0.2f
 
 struct button_state {
     uint32_t n_of_transitions;
@@ -22,15 +22,16 @@ struct controller {
     button_state_t buttons[_BUTTON_SIZE];
     bool           is_connected;
     bool           received_button_input;
-    double         cursor_x;
-    double         cursor_y;
+    int32_t        cursor_x;
+    int32_t        cursor_y;
 };
 
 struct gfx {
     /**
      * @brief global controllers that affect all windows, such as gamepads
     */
-    controller_t controller[16];
+    controller_t* controllers;
+    uint32_t      controllers_size;
     
     window_t* windows;
     uint32_t  windows_top;
@@ -117,22 +118,22 @@ static void window__set_maximized(window_t self, bool value);
 static bool window__get_maximized(window_t self);
 static void window__restore_content_area(window_t self);
 
-static void controller__button_process_input(controller_t* self, button_t button, float pressed_value);
-static void controller__clear(controller_t* self);
-static void controller__set_connected(controller_t* self, bool value);
-static bool controller__get_connected(controller_t* self);
+static void controller__button_process_input(controller_t self, button_t button, float pressed_value);
+static void controller__clear(controller_t self);
+static void controller__set_connected(controller_t self, bool value);
+static bool controller__get_connected(controller_t self);
 
 static const char* button__to_str(button_t button);
 
 static void gfx__pre_poll_events() {
-    for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(gfx.controller); ++controller_index) {
-        if (gfx.controller[controller_index].is_connected) {
-            controller__clear(&gfx.controller[controller_index]);
+    for (uint32_t controller_index = 0; controller_index < gfx.controllers_size; ++controller_index) {
+        if (gfx.controllers[controller_index]->is_connected) {
+            controller__clear(gfx.controllers[controller_index]);
         }
     }
     for (uint32_t window_index = 0; window_index < gfx.windows_top; ++window_index) {
         window_t window = gfx.windows[window_index];
-        controller__clear(&window->controller);
+        controller__clear(window->controller);
 
         if (window__get_display_state(window) == WINDOW_DISPLAY_STATE_WINDOWED) {
             glfwGetWindowPos(window->glfw_window, &window->content_area_x, &window->content_area_y);
@@ -172,8 +173,8 @@ static void gfx__poll_controllers() {
         [GLFW_GAMEPAD_AXIS_LEFT_TRIGGER]  = BUTTON_GAMEPAD_AXIS_LEFT_TRIGGER,
         [GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] = BUTTON_GAMEPAD_AXIS_RIGHT_TRIGGER
     };
-    for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(gfx.controller); ++controller_index) {
-        controller_t* controller = &gfx.controller[controller_index];
+    for (uint32_t controller_index = 0; controller_index < gfx.controllers_size; ++controller_index) {
+        controller_t controller = gfx.controllers[controller_index];
         if (controller->is_connected) {
             GLFWgamepadstate state;
             glfwGetGamepadState(controller_index, &state);
@@ -368,12 +369,12 @@ static void window__display_state_transition(window_t self) {
 }
 
 static void gfx__error_callback(int code, const char* description) {
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_ERROR, "code: [%d], description: [%s]", code, description);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_ERROR, "code: [%d], description: [%s]", code, description);
 }
 
 static void gfx__monitor_callback(GLFWmonitor* glfw_monitor, int event) {
     if (event == GLFW_CONNECTED) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "monitor %s has connected", glfwGetMonitorName(glfw_monitor));
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "monitor %s has connected", glfwGetMonitorName(glfw_monitor));
         if (gfx.monitors_top == gfx.monitors_size) {
             uint32_t monitors_prev_size = gfx.monitors_size;
             if (gfx.monitors_size == 0) {
@@ -392,7 +393,7 @@ static void gfx__monitor_callback(GLFWmonitor* glfw_monitor, int event) {
         memset(monitor, 0, sizeof(*monitor));
         monitor->glfw_monitor = glfw_monitor;
     } else if (GLFW_DISCONNECTED) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "monitor %s has disconnected", glfwGetMonitorName(glfw_monitor));
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "monitor %s has disconnected", glfwGetMonitorName(glfw_monitor));
 
         bool found_monitor = false;
         for (uint32_t monitor_index = 0; monitor_index < gfx.monitors_top; ++monitor_index) {
@@ -415,8 +416,8 @@ static void gfx__monitor_callback(GLFWmonitor* glfw_monitor, int event) {
 }
 
 static void gfx__controller_callback(int jid, int event) {
-    ASSERT(jid >= 0 && (uint32_t) jid < ARRAY_SIZE(gfx.controller));
-    controller_t* controller = &gfx.controller[jid];
+    ASSERT(jid >= 0 && (uint32_t) jid < gfx.controllers_size);
+    controller_t controller = gfx.controllers[jid];
     const bool exists_gamepad_mapping = glfwJoystickIsGamepad(jid);
 
     if (event == GLFW_CONNECTED && exists_gamepad_mapping) {
@@ -425,26 +426,26 @@ static void gfx__controller_callback(int jid, int event) {
     } else if (event == GLFW_DISCONNECTED) {
         controller__set_connected(controller, false);
     } else {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_WARN, "joystick event? %d\n", event);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_WARN, "joystick event? %d\n", event);
     }
 }
 
 static void window__should_close_callback(GLFWwindow* glfw_window) {
     window_t window = window__from_glfw_window(glfw_window);
     window__set_should_close(window, true);
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: closed by user", window->title);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: closed by user", window->title);
 }
 
 static void window__pos_changed_callback(GLFWwindow* glfw_window, int x, int y) {
     window_t window = window__from_glfw_window(glfw_window);
 
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: content area's position changed to: %d %d", window->title, x, y);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: content area's position changed to: %d %d", window->title, x, y);
 }
 
 static void window__size_changed_callback(GLFWwindow* glfw_window, int width, int height) {
     window_t window = window__from_glfw_window(glfw_window);
 
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: content area's size changed to: %u %u", window->title, width, height);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: content area's size changed to: %u %u", window->title, width, height);
 }
 
 static window_t window__from_glfw_window(GLFWwindow* glfw_window) {
@@ -457,7 +458,7 @@ static window_t window__from_glfw_window(GLFWwindow* glfw_window) {
 static void window__framebuffer_resize_callback(GLFWwindow* glfw_window, int width, int height) {
     window_t window = window__from_glfw_window(glfw_window);
 
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: framebuffer dimensions changed to: %dpx %dpx", window->title, width, height);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: framebuffer dimensions changed to: %dpx %dpx", window->title, width, height);
     // note: width and height could be greater or smaller than the (content area converted to pixels)
     //  for example they could be smaller to display other elements outside of the opengl viewport
     window__set_viewport(window, 0, 0, width, height);
@@ -466,16 +467,16 @@ static void window__framebuffer_resize_callback(GLFWwindow* glfw_window, int wid
 static void window__content_scale_callback(GLFWwindow* glfw_window, float xscale, float yscale) {
     window_t window = window__from_glfw_window(glfw_window);
 
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: content scale: %f %f", window->title, xscale, yscale);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: content scale: %f %f", window->title, xscale, yscale);
 }
 
 static void window__minimized_callback(GLFWwindow* glfw_window, int minimized) {
     window_t window = window__from_glfw_window(glfw_window);
 
     if (minimized) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: is minimized", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: is minimized", window->title);
     } else {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: is restored", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: is restored", window->title);
     }
 }
 
@@ -483,9 +484,9 @@ static void window__maximized_callback(GLFWwindow* glfw_window, int maximized) {
     window_t window = window__from_glfw_window(glfw_window);
 
     if (maximized) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: is maximized", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: is maximized", window->title);
     } else {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: is restored", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: is restored", window->title);
     }
 }
 
@@ -493,9 +494,9 @@ static void window__focus_callback(GLFWwindow* glfw_window, int focused) {
     window_t window = window__from_glfw_window(glfw_window);
     
     if (focused) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: has gained input focus", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: has gained input focus", window->title);
     } else {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: has lost input focus", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: has lost input focus", window->title);
     }
 }
 
@@ -609,14 +610,14 @@ static void window__utf32_callback(GLFWwindow* window, uint32_t utf32) {
 }
 
 static void window__add_default_button_actions(window_t self) {
-    controller__button_register_action(&self->controller, BUTTON_WINDOW_CLOSE, (void*) self, &window__button_default_action_window_close);
-    controller__button_register_action(&self->controller, BUTTON_WINDOW_MINIMIZE, (void*) self, &window__button_default_action_window_minimize);
-    controller__button_register_action(&self->controller, BUTTON_WINDOW_MAXIMIZE, (void*) self, &window__button_default_action_window_maximize);
-    controller__button_register_action(&self->controller, BUTTON_WINDOW_WINDOWED, (void*) self, &window__button_default_action_window_windowed);
-    controller__button_register_action(&self->controller, BUTTON_WINDOW_FULL_SCREEN, (void*) self, &window__button_default_action_window_full_screen);
-    controller__button_register_action(&self->controller, BUTTON_DEBUG_INFO_MESSAGE_TOGGLE, (void*) self, &window__button_default_action_debug_info_message_toggle);
-    controller__button_register_action(&self->controller, BUTTON_GET_CLIPBOARD, (void*) self, &window__button_default_action_get_clipboard);
-    controller__button_register_action(&self->controller, BUTTON_SET_CLIPBOARD, (void*) self, &window__button_default_action_set_clipboard);
+    controller__button_register_action(self->controller, BUTTON_WINDOW_CLOSE, (void*) self, &window__button_default_action_window_close);
+    controller__button_register_action(self->controller, BUTTON_WINDOW_MINIMIZE, (void*) self, &window__button_default_action_window_minimize);
+    controller__button_register_action(self->controller, BUTTON_WINDOW_MAXIMIZE, (void*) self, &window__button_default_action_window_maximize);
+    controller__button_register_action(self->controller, BUTTON_WINDOW_WINDOWED, (void*) self, &window__button_default_action_window_windowed);
+    controller__button_register_action(self->controller, BUTTON_WINDOW_FULL_SCREEN, (void*) self, &window__button_default_action_window_full_screen);
+    controller__button_register_action(self->controller, BUTTON_DEBUG_INFO_MESSAGE_TOGGLE, (void*) self, &window__button_default_action_debug_info_message_toggle);
+    controller__button_register_action(self->controller, BUTTON_GET_CLIPBOARD, (void*) self, &window__button_default_action_get_clipboard);
+    controller__button_register_action(self->controller, BUTTON_SET_CLIPBOARD, (void*) self, &window__button_default_action_set_clipboard);
 }
 
 static void window__button_default_action_window_close(void* user_pointer) {
@@ -657,7 +658,7 @@ static void window__button_default_action_debug_info_message_toggle(void* user_p
     window_t window = (window_t) user_pointer;
     (void) window;
 
-    debug__set_message_type_availability(DEBUG_INFO, !debug__get_message_type_availability(DEBUG_INFO));
+    debug__set_message_type_availability(DEBUG_MODULE_GFX, DEBUG_INFO, !debug__get_message_type_availability(DEBUG_MODULE_GFX, DEBUG_INFO));
 }
 
 static void window__button_default_action_get_clipboard(void* user_pointer) {
@@ -665,7 +666,7 @@ static void window__button_default_action_get_clipboard(void* user_pointer) {
 
     window->clipboard = window__get_clipboard(window);
 
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "paste from clipboard: %s", window->clipboard);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "paste from clipboard: %s", window->clipboard);
 }
 
 static void window__button_default_action_set_clipboard(void* user_pointer) {
@@ -674,22 +675,22 @@ static void window__button_default_action_set_clipboard(void* user_pointer) {
     window->clipboard = "whaaat";
     window__set_clipboard(window, window->clipboard);
 
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "copied to clipboard: %s", window->clipboard);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "copied to clipboard: %s", window->clipboard);
 }
 
 static void window__cursor_pos_callback(GLFWwindow* glfw_window, double x, double y) {
     window_t window = window__from_glfw_window(glfw_window);
-    window->controller.cursor_x = x;
-    window->controller.cursor_y = y;
+    window->controller->cursor_x = floor(x);
+    window->controller->cursor_y = floor(y);
 }
 
 static void window__button_process_input(window_t self, button_t button, float pressed_value) {
     // debug__writeln("window %s: processing button", self->title);
-    controller__button_process_input(&self->controller, button, pressed_value);
+    controller__button_process_input(self->controller, button, pressed_value);
 
-    button_state_t* button_state = &self->controller.buttons[button];
+    button_state_t* button_state = &self->controller->buttons[button];
     if (
-        controller__button_is_down(&self->controller, button) && 
+        controller__button_is_down(self->controller, button) && 
         button_state->action_on_button_down
     ) {
         button_state->action_on_button_down(button_state->user_pointer);
@@ -700,9 +701,9 @@ static void window__cursor_enter_callback(GLFWwindow* glfw_window, int entered) 
     window_t window = window__from_glfw_window(glfw_window);
 
     if (entered) {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: cursor has entered the content area", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: cursor has entered the content area", window->title);
     } else {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window %s: cursor has left the content area", window->title);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window %s: cursor has left the content area", window->title);
     }
 }
 
@@ -741,7 +742,7 @@ static void window__cursor_button_callback(GLFWwindow* glfw_window, int key, int
 static void window__cursor_scroll_callback(GLFWwindow* glfw_window, double xoffset, double yoffset) {
     (void) glfw_window;
 
-    debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "cursor scroll: %.3lf %.3lf", xoffset, yoffset);
+    debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "cursor scroll: %.3lf %.3lf", xoffset, yoffset);
 }
 
 static void window__drop_callback(GLFWwindow* glfw_window, int paths_size, const char** paths) {
@@ -753,12 +754,12 @@ static void window__drop_callback(GLFWwindow* glfw_window, int paths_size, const
     for (uint32_t path_index = 0; path_index < (uint32_t) paths_size; ++path_index) {
         debug__writeln("  %s", paths[path_index]);
     }
-    debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
+    debug__flush(DEBUG_MODULE_GFX, DEBUG_INFO);
 
     debug__unlock();
 }
 
-static void controller__button_process_input(controller_t* self, button_t button, float pressed_value) {
+static void controller__button_process_input(controller_t self, button_t button, float pressed_value) {
     button_state_t* button_state = &self->buttons[button];
 
     const float ended_down_value = button_state->ended_down_value;
@@ -774,12 +775,12 @@ static void controller__button_process_input(controller_t* self, button_t button
         ++button_state->n_of_repeats;
         debug__writeln("button repeats %u", button_state->n_of_repeats);
     }
-    debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
+    debug__flush(DEBUG_MODULE_GFX, DEBUG_INFO);
 
     debug__unlock();
 }
 
-static void controller__clear(controller_t* self) {
+static void controller__clear(controller_t self) {
     for (uint32_t button_index = 0; button_index < ARRAY_SIZE(self->buttons); ++button_index) {
         self->buttons[button_index].n_of_repeats     = 0;
         self->buttons[button_index].n_of_transitions = 0;
@@ -787,22 +788,22 @@ static void controller__clear(controller_t* self) {
     self->received_button_input = false;
 }
 
-static void controller__set_connected(controller_t* self, bool value) {
+static void controller__set_connected(controller_t self, bool value) {
     if (value) {
         if (!controller__get_connected(self)) {
-            debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "controller [%s] is connected", self->name);
+            debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "controller [%s] is connected", self->name);
             memset(self->buttons, 0, sizeof(self->buttons));
             self->received_button_input = false;
         }
     } else {
         if (controller__get_connected(self)) {
-            debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "controller [%s] is disconnected", self->name);
+            debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "controller [%s] is disconnected", self->name);
         }
     }
     self->is_connected = value;
 }
 
-static bool controller__get_connected(controller_t* self) {
+static bool controller__get_connected(controller_t self) {
     return self->is_connected;
 }
 

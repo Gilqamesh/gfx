@@ -1,9 +1,12 @@
+typedef struct module {
+    bool available;
+    bool level_available[_DEBUG_MESSAGE_TYPE_SIZE];
+} module_t;
 typedef struct debug {
     str_builder_t str_builder;
 
     uint32_t number_of_lines;
-    bool     error_level_availability[_DEBUG_MESSAGE_TYPE_SIZE];
-    bool     error_module_availability[_DEBUG_MODULE_SIZE];
+    module_t modules[_DEBUG_MODULE_SIZE];
     FILE*    error_file;
 
     mutex_t  write_mutex;
@@ -32,7 +35,7 @@ static const char* debug_message_type__to_str(debug_message_type_t message_type)
 static const char* debug_module__to_str(debug_module_t module) {
     switch (module) {
     case DEBUG_MODULE_APP:         return "app";
-    case DEBUG_MODULE_GLFW:        return "glfw";
+    case DEBUG_MODULE_GFX:         return "gfx";
     case DEBUG_MODULE_GL:          return "gl";
     case DEBUG_MODULE_VULKAN:      return "vulkan";
     case DEBUG_MODULE_GAME:        return "game";

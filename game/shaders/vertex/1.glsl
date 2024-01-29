@@ -45,32 +45,55 @@ float point_size_2(void) {
 
 subroutine uniform subroutine__get_point_size subroutine_uniform;
 
+vec4 bezier_quadratic(vec4 a, vec4 b, vec4 c, float t);
+vec4 bezier_cubic(vec4 a, vec4 b, vec4 c, float t);
+
 void main() {
     float xoffset = -0.5f;
+    float yoffset = -0.2f;
     float xstretch = 0.3f;
-    vec4 p = vec4(
-        pos.x + xoffset + gl_InstanceID * xstretch,
-        //pos.x,
-        pos.y,
-        0.0,
-        1.0
+    float ystretch = 0.4f;
+    // vec4 p = vec4(
+    //     pos.x + xoffset + gl_InstanceID * xstretch,
+    //     //pos.x,
+    //     pos.y,
+    //     0.0,
+    //     1.0
+    // );
+    vec4 p = bezier_quadratic(
+        vec4(pos.x + xoffset + (gl_InstanceID + 0) * xstretch, pos.y + yoffset + (gl_InstanceID + 0) * ystretch, gl_InstanceID, 1.0),
+        vec4(pos.x + xoffset + (gl_InstanceID + 1) * xstretch, pos.y + yoffset + (gl_InstanceID + 1) * ystretch, gl_InstanceID, 1.0),
+        vec4(pos.x + xoffset + (gl_InstanceID + 2) * xstretch, pos.y + yoffset + (gl_InstanceID + 2) * ystretch, gl_InstanceID, 1.0),
+        0.2
     );
 
-    gl_Position = vs_common.mvp * p;
-    //vs_common.offset;
+    gl_Position = p * vs_common.mvp;
+    // vs_common.offset;
     gl_PointSize = subroutine_uniform();
-    //gl_PointSize = 50;
+    // gl_PointSize = 50;
     vs_out.texture_coordinate = texture_coordinate;
     vs_out.texture_index = gl_InstanceID % 3;
-/*
-    if (texture_coordinate.x == 1.0f && texture_coordinate.y == 1.0f) {
-        vs_out.color = vec3(1.0, 0.0, 0.0);
-    } else if (texture_coordinate.x == 1.0f && texture_coordinate.y == 0.0f) {
-        vs_out.color = vec3(0.0, 1.0, 0.0);
-    } else if (texture_coordinate.x == 0.0f && texture_coordinate.y == 0.0f) {
-        vs_out.color = vec3(0.0, 0.0, 1.0);
-    } else {
-        vs_out.color = vec3(1.0, 1.0, 1.0);
-    }
-*/
+
+    // if (texture_coordinate.x == 1.0f && texture_coordinate.y == 1.0f) {
+    //     vs_out.color = vec3(1.0, 0.0, 0.0);
+    // } else if (texture_coordinate.x == 1.0f && texture_coordinate.y == 0.0f) {
+    //     vs_out.color = vec3(0.0, 1.0, 0.0);
+    // } else if (texture_coordinate.x == 0.0f && texture_coordinate.y == 0.0f) {
+    //     vs_out.color = vec3(0.0, 0.0, 1.0);
+    // } else {
+    //     vs_out.color = vec3(1.0, 1.0, 1.0);
+    // }
+}
+
+vec4 bezier_quadratic(vec4 a, vec4 b, vec4 c, float t) {
+    vec4 d = mix(a, b, t);
+    vec4 e = mix(b, c, t);
+    return   mix(d, e, t);
+}
+
+vec4 bezier_cubic(vec4 a, vec4 b, vec4 c, vec4 d, float t) {
+    vec4 e = mix(a, b, t);
+    vec4 f = mix(b, c, t);
+    vec4 g = mix(c, d, t);
+    return   bezier_quadratic(e, f, g, t);
 }

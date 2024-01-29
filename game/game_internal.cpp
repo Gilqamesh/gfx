@@ -11,10 +11,18 @@ struct game {
     image_t        cursor_image;
 
     window_t       window;
+    controller_t   controller;
 
     glm::vec3 position;
     glm::vec3 orientation;
     glm::vec3 up;
+
+    int32_t p_prev_cursorx;
+    int32_t p_prev_cursory;
+    int32_t p_cur_cursorx;
+    int32_t p_cur_cursory;
+
+    glm::mat4 player_vp;
 
     geometry_object_t         geometry;
     shader_program_t          vs_program;
@@ -62,10 +70,10 @@ static bool game__init_game_objects(game_t self) {
         // 0.0f, 0.0f, 1.0f,
         // 0.0f, 1.0f, 0.0f,
         // 0.0f, 1.0f, 1.0f
-        1.5, 1.5,
-        1.5, -0.5,
-        -0.5, -0.5,
-        -0.5, 1.5
+        1.125, 1.125,
+        1.125, -0.875,
+        -0.875, -0.875,
+        -0.875, 1.125
     };
     // const float colors[] = {
     //     0.0f, 0.0f, 1.0f,
@@ -232,30 +240,47 @@ static bool game__init_textures(game_t self) {
     // gl_buffer__unmap(&self->texture_buffer);
     // texture__attach_buffer(&self->texture, &self->texture_buffer, 0, self->texture_buffer.size);
 
-    const uint32_t wood_indices = 3;
+    // const uint32_t wood_indices = 3;
 
-    for (uint32_t wood_index = 0; wood_index < wood_indices; ++wood_index) {
-        int number_of_channels_per_pixel;
-        image_t image;
-        char texture_path[256];
-        snprintf(texture_path, ARRAY_SIZE(texture_path), "game/textures/wood%u.jpg", wood_index);
-        image.data = stbi_load(texture_path, (int32_t*) &image.w, (int32_t*) &image.h, &number_of_channels_per_pixel, 0);
-        if (!image.data) {
-            return false;
-        };
+    // for (uint32_t wood_index = 0; wood_index < wood_indices; ++wood_index) {
+    //     int number_of_channels_per_pixel;
+    //     image_t image;
+    //     char texture_path[256];
+    //     snprintf(texture_path, ARRAY_SIZE(texture_path), "game/textures/wood%u.jpg", wood_index);
+    //     image.data = stbi_load(texture_path, (int32_t*) &image.w, (int32_t*) &image.h, &number_of_channels_per_pixel, 0);
+    //     if (!image.data) {
+    //         return false;
+    //     };
 
-        if (wood_index == 0) {
-            if (!texture__create(
-                &self->texture,
-                TEXTURE_TYPE_2D_ARRAY, GL_TYPE_U8, (gl_channel_count_t) number_of_channels_per_pixel, true, 1,
-                0, image.w, image.h, wood_indices
-            )) {
-                return false;
-            }
-        }
-        texture__write(&self->texture, 0, 0, wood_index, image.data, image.w, image.h, 1);
+    //     if (wood_index == 0) {
+    //         if (!texture__create(
+    //             &self->texture,
+    //             TEXTURE_TYPE_2D_ARRAY, GL_TYPE_U8, (gl_channel_count_t) number_of_channels_per_pixel, true, 1,
+    //             0, image.w, image.h, wood_indices
+    //         )) {
+    //             return false;
+    //         }
+    //     }
+    //     texture__write(&self->texture, 0, 0, wood_index, image.data, image.w, image.h, 1);
 
-        free(image.data);
+    //     free(image.data);
+    // }
+
+    int number_of_channels_per_pixel;
+    image_t image;
+    char texture_path[256];
+    snprintf(texture_path, ARRAY_SIZE(texture_path), "game/textures/wood0.jpg");
+    image.data = stbi_load(texture_path, (int32_t*) &image.w, (int32_t*) &image.h, &number_of_channels_per_pixel, 0);
+    if (!image.data) {
+        return false;
+    };
+
+    if (!texture__create(
+        &self->texture,
+        TEXTURE_TYPE_2D, GL_TYPE_U8, (gl_channel_count_t) number_of_channels_per_pixel, true, 13,
+        image.data, image.w, image.h, 0
+    )) {
+        return false;
     }
 
     if (!texture_sampler__create(&self->texture_sampler_1)) {
@@ -338,27 +363,10 @@ static void shader_program__vs_predraw_callback(shader_program_t* self, void* da
         vs_common_members_count, vs_common_member_indices, vs_common_member_matrix_strides
     );
     uint8_t* vs_common_data = (uint8_t*) gl_buffer__map(&game->uniform_block_buffer, game->uniform_block_buffer.size, 0);
-    // mat4_t model_m = mat4__id();
-    glm::mat4 view_m = glm::lookAt(game->position, glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    uint32_t window_width;
-    uint32_t window_height;
-    window__get_windowed_state_content_area(game->window, 0, 0, &window_width, &window_height);
-    const uint32_t degrees = 60;
-    const float radians = (float) M_PI * (float) degrees / 180.0f;
-    glm::mat4 proj_m = glm::perspective(radians, (float) window_width / (float) window_height, 0.1f, 10.0f);
-    // glm::mat4 proj_m = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f);
-    // mat4_t proj_m = mat4__perspective_frustum(-10.0f, 10.0f, -10.0f, 10.0f, -10.0f, 10.0f);
-    // mat4_t proj_m = mat4__perspective_aspect(M_PI / 2.0f, 1, 1, 1.0f, 10.0f);
-    // mat4_t proj_m = mat4__perspective_frustum(-2.0f, 2.0f, -2.0f, 2.0f, -10.0f, 100.0f);
-    // mat4_t proj_m = mat4__orthographic(-2.0f, 2.0f, -2.0f, 2.0f, -10.0f, 100.0f);
-    // mat4_t mvp = proj_m;
-    // glm::mat4 mvp = view_m;
-    glm::mat4 mvp = proj_m * view_m;
-    // mvp = mat4__mul(mvp, );
     for (uint32_t row = 0; row < 4; ++row) {
         uint32_t offset = vs_common_member_offsets[1] + row * vs_common_member_matrix_strides[1];
         for (uint32_t col = 0; col < 4; ++col) {
-            *((float*) (vs_common_data + offset)) = mvp[col][row];
+            *((float*) (vs_common_data + offset)) = game->player_vp[col][row];
             offset += sizeof(float);
         }
     }
@@ -375,8 +383,8 @@ static void shader_program__fs_predraw_callback(shader_program_t* self, void* da
 
     const uint32_t texture_unit = 0;
 
-    texture_sampler_t* sampler = ((uint32_t) game->time) % 2 == 0 ? &game->texture_sampler_2 : &game->texture_sampler_1;
-    texture__bind(&game->texture, sampler, texture_unit);
+    // texture_sampler_t* sampler = ((uint32_t) game->time) % 2 == 0 ? &game->texture_sampler_2 : &game->texture_sampler_1;
+    texture__bind(&game->texture, &game->texture_sampler_1, texture_unit);
 
     // (void) self;
     uint32_t texture_sampler_location = 0;

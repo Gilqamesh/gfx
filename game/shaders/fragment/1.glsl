@@ -1,7 +1,7 @@
 #version 460
 
 layout (binding = 0)
-uniform sampler2DArray texture_sampler;
+uniform sampler2D texture_sampler;
 
 out vec4 ocolor;
 
@@ -18,6 +18,6 @@ void main() {
     //int texture_size = textureSize(texture_sampler);
     //int texel_index = int(cos(gl_FragCoord.x) * gl_FragCoord.y) % texture_size;
     //ocolor = texelFetch(texture_sampler, texel_index).rgba;
-    ocolor = texture(texture_sampler, vec3(fs_in.texture_coordinate, float(fs_in.texture_index)));
-    //ocolor = texture(texture_sampler, fs_in.texture_coordinate);
+    //ocolor = texture(texture_sampler, vec3(fs_in.texture_coordinate, float(fs_in.texture_index)));
+    ocolor = texture(texture_sampler, fs_in.texture_coordinate);
 }

@@ -11,6 +11,7 @@ bool gl__init_context() {
         debug__write_and_flush(DEBUG_MODULE_GL, DEBUG_ERROR, "gladLoadGLLoader failed to load opengl function pointers");
         return false;
     }
+    // glEnable(GL_DEPTH_TEST);
 
     glEnable(GL_DEBUG_OUTPUT);
     // note: may want this

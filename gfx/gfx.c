@@ -49,10 +49,16 @@ bool gfx__init() {
     // glfwInitHint();
     if (glfwInit() == GLFW_FALSE) {
         debug__writeln("glfwInit == GLFW_FALSE");
-        debug__flush(DEBUG_MODULE_GLFW, DEBUG_ERROR);
+        debug__flush(DEBUG_MODULE_GFX, DEBUG_ERROR);
         
         debug__unlock();
         return false;
+    }
+
+    gfx.controllers_size = 16;
+    gfx.controllers = calloc(1, gfx.controllers_size * sizeof(*gfx.controllers));
+    for (uint32_t controller_index = 0; controller_index < gfx.controllers_size; ++controller_index) {
+        gfx.controllers[controller_index] = calloc(1, sizeof(*gfx.controllers[controller_index]));
     }
 
     glfwSetMonitorCallback(&gfx__monitor_callback);
@@ -75,13 +81,13 @@ bool gfx__init() {
         debug__writeln("  %u: %s - physical size: %ux%u [mm]", monitor_index, glfwGetMonitorName(monitor->glfw_monitor), width_mm, height_mm);
     }
 
-    debug__flush(DEBUG_MODULE_GLFW, DEBUG_INFO);
+    debug__flush(DEBUG_MODULE_GFX, DEBUG_INFO);
 
     debug__unlock();
 
-    for (uint32_t controller_index = 0; controller_index < ARRAY_SIZE(gfx.controller); ++controller_index) {
+    for (uint32_t controller_index = 0; controller_index < gfx.controllers_size; ++controller_index) {
         if (glfwJoystickIsGamepad(controller_index)) {
-            controller_t* controller = &gfx.controller[controller_index];
+            controller_t controller = gfx.controllers[controller_index];
             controller->name = glfwGetJoystickName(controller_index);
             controller__set_connected(controller, true);
         }
@@ -111,9 +117,14 @@ void gfx__wait_events() {
     gfx__post_poll_events();
 }
 
-monitor_t* monitor__get_monitors(uint32_t* number_of_monitors) {
+monitor_t* gfx__get_monitors(uint32_t* number_of_monitors) {
     *number_of_monitors = gfx.monitors_top;
     return gfx.monitors;
+}
+
+controller_t* gfx__get_controllers(uint32_t* number_of_controllers) {
+    *number_of_controllers = gfx.controllers_size;
+    return gfx.controllers;
 }
 
 void monitor__get_screen_size(monitor_t self, uint32_t* w, uint32_t* h) {
@@ -131,23 +142,25 @@ window_t window__create(monitor_t monitor, const char* title, uint32_t width, ui
         uint32_t windows_prev_size = gfx.windows_size;
         if (gfx.windows_size == 0) {
             gfx.windows_size = 4;
-            gfx.windows = malloc(gfx.windows_size * sizeof(*gfx.windows));
+            gfx.windows = calloc(1, gfx.windows_size * sizeof(*gfx.windows));
         } else {
             gfx.windows_size <<= 1;
             gfx.windows = realloc(gfx.windows, gfx.windows_size * sizeof(*gfx.windows));
         }
         for (uint32_t window_index = windows_prev_size; window_index < gfx.windows_size; ++window_index) {
-            gfx.windows[window_index] = malloc(sizeof(*gfx.windows[window_index]));
+            gfx.windows[window_index] = calloc(1, sizeof(*gfx.windows[window_index]));
         }
     }
     window_t result = gfx.windows[gfx.windows_top++];
-    memset(result, 0, sizeof(*result));
+    if (!result->controller) {
+        result->controller = calloc(1, sizeof(*result->controller));
+    }
 
     result->title                   = title;
     result->monitor                 = monitor;
-    result->controller.name         = title;
+    result->controller->name        = title;
     result->requested_display_state = WINDOW_DISPLAY_STATE_WINDOWED;
-    controller__set_connected(&result->controller, true);
+    controller__set_connected(result->controller, true);
 
     // for faster window creation and application switching, choose the closest video mode available (relative to monitor)
     const GLFWvidmode* mode = glfwGetVideoMode(monitor->glfw_monitor);
@@ -432,9 +445,9 @@ void window__set_aspect_ratio(window_t self, uint32_t num, uint32_t den) {
     if (num == 0 || den == 0) {
         num = GLFW_DONT_CARE;
         den = GLFW_DONT_CARE;
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window aspect disabled");
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window aspect disabled");
     } else {
-        debug__write_and_flush(DEBUG_MODULE_GLFW, DEBUG_INFO, "window aspect ratio changed to: %u %u", num, den);
+        debug__write_and_flush(DEBUG_MODULE_GFX, DEBUG_INFO, "window aspect ratio changed to: %u %u", num, den);
     }
     glfwSetWindowAspectRatio(self->glfw_window, num, den);
 }
@@ -447,36 +460,40 @@ void window__set_clipboard(window_t self, const char* str) {
     glfwSetClipboardString(self->glfw_window, str);
 }
 
-controller_t* window__get_controller(window_t self) {
-    return &self->controller;
+controller_t window__get_controller(window_t self) {
+    return self->controller;
 }
 
-bool controller__button_is_down(controller_t* self, button_t button) {
+bool controller__is_connected(controller_t self) {
+    return self->is_connected;
+}
+
+bool controller__button_is_down(controller_t self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
-    return self->buttons[button].ended_down_value > BUTTON_ENDED_DOWN_MINIMUM_VALUE_FOR_PRESSED;
+    return fabs(self->buttons[button].ended_down_value) > BUTTON_ENDED_DOWN_MINIMUM_VALUE_FOR_PRESSED;
 }
 
-float controller__button_value(controller_t* self, button_t button) {
+float controller__button_value(controller_t self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
     return self->buttons[button].ended_down_value;
 }
 
-uint32_t controller__button_n_of_repeats(controller_t* self, button_t button) {
+uint32_t controller__button_n_of_repeats(controller_t self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
     return self->buttons[button].n_of_repeats;
 }
 
-uint32_t controller__button_n_of_transitions(controller_t* self, button_t button) {
+uint32_t controller__button_n_of_transitions(controller_t self, button_t button) {
     ASSERT(button < _BUTTON_SIZE);
     return self->buttons[button].n_of_transitions;
 }
 
-void controller__get_cursor_pos(controller_t* self, double* x, double* y) {
+void controller__get_cursor_pos(controller_t self, int32_t* x, int32_t* y) {
     *x = self->cursor_x;
     *y = self->cursor_y;
 }
 
-void controller__button_register_action(controller_t* self, button_t button, void* user_pointer, void (*action_on_button_down)(void*)) {
+void controller__button_register_action(controller_t self, button_t button, void* user_pointer, void (*action_on_button_down)(void*)) {
     self->buttons[button].action_on_button_down = action_on_button_down;
     self->buttons[button].user_pointer          = user_pointer;
 }

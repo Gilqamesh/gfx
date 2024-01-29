@@ -204,7 +204,7 @@ int32_t module__link(module_t self, compiler_t compiler) {
     self->is_linked = -1;
 
     module_t fake_module = module__create(self->dir, compiler);
-    module__append_lflag(fake_module, "%s", compiler->path);
+    module__append_lflag(fake_module, "%s",  compiler->path);
     module__append_lflag(fake_module, "-o");
     // module__append_lflag(fake_module, "%s.out", self->dir);
     module__append_lflag(fake_module, "a.out", self->dir);

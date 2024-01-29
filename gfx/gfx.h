@@ -16,7 +16,7 @@
 # include "helper_macros.h"
 
 /********************************************************************************
- * Module API
+ * Module level API
  ********************************************************************************/
 
 PUBLIC_API bool gfx__init();
@@ -28,14 +28,17 @@ PUBLIC_API void gfx__poll_events();
 // @brief blocks thread and waits for at least one incoming event
 PUBLIC_API void gfx__wait_events();
 
+typedef struct monitor* monitor_t;
+
+PUBLIC_API monitor_t* gfx__get_monitors(uint32_t* number_of_monitors);
+
+typedef struct controller* controller_t;
+
+PUBLIC_API controller_t* gfx__get_controllers(uint32_t* number_of_controllers);
+
 /********************************************************************************
  * Monitor API
  ********************************************************************************/
-
-struct         monitor;
-typedef struct monitor* monitor_t;
-
-PUBLIC_API monitor_t* monitor__get_monitors(uint32_t* number_of_monitors);
 
 PUBLIC_API void monitor__get_screen_size(monitor_t self, uint32_t* w, uint32_t* h);
 
@@ -204,24 +207,26 @@ typedef enum button {
     _BUTTON_SIZE
 } button_t;
 
-typedef struct controller controller_t;
+PUBLIC_API controller_t window__get_controller(window_t self);
 
-PUBLIC_API controller_t* window__get_controller(window_t self);
+PUBLIC_API bool controller__is_connected(controller_t self);
 
 // @brief current state of button
-PUBLIC_API bool controller__button_is_down(controller_t* self, button_t button);
+PUBLIC_API bool controller__button_is_down(controller_t self, button_t button);
 
 // @brief For buttons that have multiple values other than pressed/not-pressed
-PUBLIC_API float controller__button_value(controller_t* self, button_t button);
+PUBLIC_API float controller__button_value(controller_t self, button_t button);
 
-PUBLIC_API uint32_t controller__button_n_of_repeats(controller_t* self, button_t button);
+PUBLIC_API uint32_t controller__button_n_of_repeats(controller_t self, button_t button);
 
 // @brief number of press/release transitions
-PUBLIC_API uint32_t controller__button_n_of_transitions(controller_t* self, button_t button);
+PUBLIC_API uint32_t controller__button_n_of_transitions(controller_t self, button_t button);
 
-PUBLIC_API void controller__get_cursor_pos(controller_t* self, double* x, double* y);
+//! @brief Get cursor position relative to the content area's top left corner
+PUBLIC_API void controller__get_cursor_pos(controller_t self, int32_t* x, int32_t* y);
+PUBLIC_API void controller__get_cursor_scroll(controller_t self, double* x, double* y);
 
-PUBLIC_API void controller__button_register_action(controller_t* self, button_t button, void* user_pointer, void (*action_on_button_down)(void*));
+PUBLIC_API void controller__button_register_action(controller_t self, button_t button, void* user_pointer, void (*action_on_button_down)(void*));
 
 /********************************************************************************
  * Cursor API
